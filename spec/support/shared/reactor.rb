@@ -209,13 +209,13 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
-    describe '#schedule' do
+    describe '#delay' do
         it "schedules a task to be run at the given time in the #{klass}#thread" do
             counted_ticks  = 0
             reactor_thread = nil
             call_time      = nil
 
-            subject.schedule 1 do
+            subject.delay 1 do
                 reactor_thread = Thread.current
                 call_time      = Time.now
                 counted_ticks += 1

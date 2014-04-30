@@ -12,7 +12,7 @@ require_relative 'tasks/base'
 require_relative 'tasks/persistent'
 require_relative 'tasks/one_off'
 require_relative 'tasks/periodic'
-require_relative 'tasks/scheduled'
+require_relative 'tasks/delayed'
 
 module Arachni
 class Reactor

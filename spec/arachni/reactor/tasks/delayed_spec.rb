@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe Arachni::Reactor::Tasks::Scheduled do
+describe Arachni::Reactor::Tasks::Delayed do
     it_should_behave_like 'Arachni::Reactor::Tasks::Base'
 
     let(:list) { Arachni::Reactor::Tasks.new }

@@ -15,7 +15,7 @@ class Tasks
 # {Base Task} occurring after {#interval} seconds.
 #
 # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
-class Scheduled < Periodic
+class Delayed < Periodic
 
     # @note Will call {#done} right after.
     #
