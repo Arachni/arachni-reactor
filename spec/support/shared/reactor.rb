@@ -67,6 +67,16 @@ shared_examples_for 'Arachni::Reactor' do
             subject.ticks.should > 0
         end
 
+        context 'when a block is given' do
+            it 'is called ASAP' do
+                subject.run do
+                    subject.should be_running
+                    subject.ticks.should == 0
+                    subject.stop
+                end
+            end
+        end
+
         context 'when already running' do
             it "raises #{klass::Error::AlreadyRunning}" do
                 run_reactor_in_thread

@@ -187,14 +187,20 @@ class Reactor
         next_tick { @stop = true }
     end
 
-    # Starts the {Reactor} loop.
+    # Starts the {Reactor} loop and blocks the current {#thread} until {#stop}
+    # is called.
+    #
+    # @param    [Block] block
+    #   Block to call right before initializing the loop.
     #
     # @raise    [Error::AlreadyRunning]
     #   If already running.
-    def run
+    def run( &block )
         fail Error::AlreadyRunning, 'The reactor is already running.' if running?
 
         @thread = Thread.current
+
+        block.call if block_given?
 
         while !@stop
             process_connections
