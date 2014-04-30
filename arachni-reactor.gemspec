@@ -7,7 +7,7 @@
 =end
 
 Gem::Specification.new do |s|
-    require_relative 'lib/arachni/reactor/version'
+    require File.expand_path( File.dirname( __FILE__ ) ) + '/lib/arachni/reactor/version'
 
     s.name              = 'arachni-reactor'
     s.license           = 'BSD 3-Clause'
@@ -24,6 +24,9 @@ Gem::Specification.new do |s|
 
     s.extra_rdoc_files  = %w(README.md LICENSE.md CHANGELOG.md)
     s.rdoc_options      = ['--charset=UTF-8']
+
+    s.add_development_dependency 'rake'
+    s.add_development_dependency 'rspec'
 
     s.description = <<description
     Arachni::Reactor is a simple, lightweight, pure-Ruby implementation of the Reactor
