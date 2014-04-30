@@ -33,7 +33,7 @@ describe Arachni::Reactor::Tasks::Periodic do
                 time = Time.now
                 task.call while called < 5
 
-                (Time.now - time).round(3).should == 1.25
+                (Time.now - time).round(2).should == 1.25
             end
         end
     end
