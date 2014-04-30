@@ -36,8 +36,9 @@ class Reactor
 
     end
 
-    require_relative 'reactor/connection'
-    require_relative 'reactor/tasks'
+    %w(connection tasks queue).each do |f|
+        require_relative "reactor/#{f}"
+    end
 
     # @return     [Integer,nil]
     #   Amount of time to wait for a connection.
@@ -81,6 +82,12 @@ class Reactor
         @ticks       = 0
         @thread      = nil
         @tasks       = Tasks.new
+    end
+
+    # @return   [Reactor::Queue]
+    #   New  {Reactor::Queue} with `self` as the scheduler.
+    def create_queue
+        Reactor::Queue.new self
     end
 
     # @note {Connection::Error Connection errors} will be passed to the `handler`'s

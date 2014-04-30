@@ -31,6 +31,18 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#create_queue' do
+        let(:queue) { subject.create_queue }
+
+        it 'creates a new queue' do
+            queue.should be_kind_of klass::Queue
+        end
+
+        it 'assigns this reactor as the scheduler' do
+            queue.reactor.should == subject
+        end
+    end
+
     describe '#ticks' do
         context 'when the reactor is' do
             context 'not running' do
