@@ -1,0 +1,7 @@
+--no-private
+--markup=markdown
+--verbose
+--title "Arachni::Reactor"
+-
+CHANGELOG.md
+LICENSE.md
