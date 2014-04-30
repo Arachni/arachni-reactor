@@ -171,6 +171,49 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#schedule' do
+        context 'when the reactor is running' do
+            context 'in the same thread' do
+                it 'calls the block right away' do
+                    subject.run_block do
+                        out_tick = subject.ticks
+                        in_tick  = nil
+
+                        subject.schedule do
+                            in_tick = subject.ticks
+                        end
+
+                        out_tick.should == in_tick
+                    end
+                end
+            end
+
+            context 'in a different thread' do
+                it 'calls the block at the next tick' do
+                    t = run_reactor_in_thread
+
+                    subject.schedule do
+                        subject.should be_in_same_thread
+                        subject.stop
+                    end
+                    t.join
+                end
+            end
+        end
+
+        context 'when the reactor is not running' do
+            it 'schedules it to be run at the next tick'do
+                called = false
+                subject.schedule do
+                    called = subject.in_same_thread?
+                end
+
+                subject.run_block{}
+                called.should be_true
+            end
+        end
+    end
+
     describe '#next_tick' do
         it "schedules a task to be run at the next tick in the #{klass}#thread" do
             thread = run_reactor_in_thread

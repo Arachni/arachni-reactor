@@ -184,7 +184,7 @@ class Reactor
 
     # Stops the {Reactor} {#run loop} at the next tick.
     def stop
-        next_tick { @stop = true }
+        schedule { @stop = true }
     end
 
     # @note Will simply return if already {#running?}.
@@ -198,7 +198,7 @@ class Reactor
     #   Block to call right before initializing the loop.
     def run( &block )
         if running?
-            next_tick( &block ) if block_given?
+            schedule( &block ) if block_given?
             return
         end
 
@@ -235,7 +235,7 @@ class Reactor
 
         run do
             block.call
-            stop
+            next_tick { stop }
         end
     end
 
@@ -243,6 +243,20 @@ class Reactor
     #   Schedules a {Tasks::Persistent task} to be run at each tick.
     def on_tick( &block )
         @tasks << Tasks::Persistent.new( &block )
+        nil
+    end
+
+    # @param    [Block] block
+    #   Schedules a task to be run as soon as possible, either immediately if
+    #   the caller is {#in_same_thread? in the same thread}, or at the
+    #   {#next_tick} otherwise.
+    def schedule( &block )
+        if running? && in_same_thread?
+            block.call
+        else
+            next_tick(&block)
+        end
+
         nil
     end
 
