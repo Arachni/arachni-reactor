@@ -283,7 +283,7 @@ class Reactor
     # @param    [Float] time
     #   Time in seconds.
     # @param    [Block] block
-    #   Schedules a {Tasks::Scheduled task} to be run in `time` seconds.
+    #   Schedules a {Tasks::Delayed task} to be run in `time` seconds.
     def delay( time, &block )
         @tasks << Tasks::Delayed.new( time, &block )
         nil
