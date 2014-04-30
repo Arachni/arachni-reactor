@@ -187,16 +187,20 @@ class Reactor
         next_tick { @stop = true }
     end
 
+    # @note Will simply return if already {#running?}.
+    # @note If already {#running?} and a `block` is given it will be forwarded
+    #   to {#next_tick}.
+    #
     # Starts the {Reactor} loop and blocks the current {#thread} until {#stop}
     # is called.
     #
     # @param    [Block] block
     #   Block to call right before initializing the loop.
-    #
-    # @raise    [Error::AlreadyRunning]
-    #   If already running.
     def run( &block )
-        fail Error::AlreadyRunning, 'The reactor is already running.' if running?
+        if running?
+            next_tick( &block ) if block_given?
+            return
+        end
 
         @thread = Thread.current
 
@@ -217,7 +221,7 @@ class Reactor
         @thread = nil
     end
 
-    # Starts the {Reactor} loop, blocks the current {#thread} while the
+    # Starts the {#run Reactor loop}, blocks the current {#thread} while the
     # given `block` executes and then {#stop}s it.
     #
     # @param    [Block] block
@@ -227,6 +231,7 @@ class Reactor
     #   If already running.
     def run_block( &block )
         fail ArgumentError, 'Missing block.' if !block_given?
+        fail Error::AlreadyRunning, 'The reactor is already running.' if running?
 
         run do
             block.call

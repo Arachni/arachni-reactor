@@ -78,10 +78,19 @@ shared_examples_for 'Arachni::Reactor' do
         end
 
         context 'when already running' do
-            it "raises #{klass::Error::AlreadyRunning}" do
-                run_reactor_in_thread
-                sleep 0.1
-                expect { subject.run }.to raise_error klass::Error::AlreadyRunning
+            it 'schedules a task to be run at the next tick' do
+                thread = run_reactor_in_thread
+
+                reactor_thread = nil
+                subject.run do
+                    reactor_thread = Thread.current
+                end
+
+                sleep 0.1 while !reactor_thread
+
+                reactor_thread.should be_kind_of Thread
+                reactor_thread.should_not == Thread.current
+                thread.should == reactor_thread
             end
         end
     end
