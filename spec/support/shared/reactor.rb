@@ -191,6 +191,35 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#in_same_thread?' do
+        context 'when running in the same thread as the reactor loop' do
+            it 'returns true' do
+                t = run_reactor_in_thread
+                sleep 0.1
+
+                subject.next_tick do
+                    subject.should be_in_same_thread
+                    subject.stop
+                end
+
+                t.join
+            end
+        end
+        context 'when not running in the same thread as the reactor loop' do
+            it 'returns false' do
+                run_reactor_in_thread
+                sleep 0.1
+
+                subject.should_not be_in_same_thread
+            end
+        end
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect {subject.in_same_thread? }.to raise_error klass::Error::NotRunning
+            end
+        end
+    end
+
     describe '#running?' do
         context 'when the reactor is running' do
             it 'returns true' do

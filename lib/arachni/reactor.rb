@@ -21,6 +21,13 @@ class Reactor
     # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
     class Error < StandardError
 
+        # Raised when trying to perform an operation that requires the Reactor
+        # to be running when it is not.
+        #
+        # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
+        class NotRunning < Error
+        end
+
         # Raised when trying to run an already running loop.
         #
         # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
@@ -233,6 +240,14 @@ class Reactor
     #   Thread of the {#run loop}, `nil` if not running.
     def thread
         @thread
+    end
+
+    # @return   [Bool]
+    #   `true` if the caller is in the same {#thread} as the {#run reactor loop},
+    #   `false` otherwise.
+    def in_same_thread?
+        fail Error::NotRunning if !running?
+        Thread.current == thread
     end
 
     # Attaches a connection to the {Reactor} loop.
