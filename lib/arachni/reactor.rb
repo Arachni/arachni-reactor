@@ -217,6 +217,23 @@ class Reactor
         @thread = nil
     end
 
+    # Starts the {Reactor} loop, blocks the current {#thread} while the
+    # given `block` executes and then {#stop}s it.
+    #
+    # @param    [Block] block
+    #   Block to call.
+    #
+    # @raise    [Error::AlreadyRunning]
+    #   If already running.
+    def run_block( &block )
+        fail ArgumentError, 'Missing block.' if !block_given?
+
+        run do
+            block.call
+            stop
+        end
+    end
+
     # @param    [Block] block
     #   Schedules a {Tasks::Persistent task} to be run at each tick.
     def on_tick( &block )

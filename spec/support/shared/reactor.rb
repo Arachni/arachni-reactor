@@ -86,6 +86,32 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#run_block' do
+        it 'runs the reactor loop just for the given block' do
+            running = false
+            subject.run_block do
+                running = subject.running?
+            end
+
+            subject.should_not be_running
+            running.should be_true
+        end
+
+        context 'when no block is given' do
+            it "raises #{ArgumentError}" do
+                expect { subject.run_block }.to raise_error ArgumentError
+            end
+        end
+
+        context 'when already running' do
+            it "raises #{klass::Error::AlreadyRunning}" do
+                run_reactor_in_thread
+                sleep 0.1
+                expect { subject.run_block{} }.to raise_error klass::Error::AlreadyRunning
+            end
+        end
+    end
+
     describe '#thread' do
         context 'when the reactor is' do
             context 'not running' do
