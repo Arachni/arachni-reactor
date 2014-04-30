@@ -85,7 +85,7 @@ class Reactor
     end
 
     # @return   [Reactor::Queue]
-    #   New  {Reactor::Queue} with `self` as the scheduler.
+    #   New {Reactor::Queue} with `self` as the scheduler.
     def create_queue
         Reactor::Queue.new self
     end
