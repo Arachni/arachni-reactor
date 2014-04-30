@@ -39,20 +39,31 @@ class Reactor
     require_relative 'reactor/connection'
     require_relative 'reactor/tasks'
 
-    # @return   [Integer,nil]
+    # @return     [Integer,nil]
     #   Amount of time to wait for a connection.
-    attr_reader :max_tick_interval
+    attr_accessor :max_tick_interval
 
-    # @return   [Array<Connection>]
+    # @return     [Array<Connection>]
     #   {#attach Attached} connections.
-    attr_reader :connections
+    attr_reader   :connections
 
-    # @return   [Integer]
-    attr_reader :ticks
+    # @return     [Integer]
+    attr_reader   :ticks
 
     DEFAULT_OPTIONS = {
         max_tick_interval: 0.1
     }
+
+    class <<self
+
+        # @return   [Reactor]
+        #   Singleton Reactor.
+        def global
+            @reactor ||= new
+        end
+    end
+    # Global/Singleton Reactor at the ready!
+    global
 
     # @param    [Hash]  options
     # @option   [Integer,nil]   :max_tick_interval    (0.1)

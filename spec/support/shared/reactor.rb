@@ -19,6 +19,12 @@ shared_examples_for 'Arachni::Reactor' do
     let(:reactor) { subject }
     let(:data) { ('blah' * 999999) + "\n\n" }
 
+    describe '.global' do
+        it 'returns a Reactor' do
+            klass.global.should be_kind_of klass
+        end
+    end
+
     describe '#initialize' do
         describe :max_tick_interval do
             it 'sets the maximum amount of time for each loop interval'
