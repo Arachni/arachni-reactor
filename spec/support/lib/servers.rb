@@ -77,9 +77,15 @@ class Servers
         return if !server_info[:pid]
 
         begin
-            Process.kill('KILL', server_info[:pid] ) while sleep 0.1
+            Process.kill( 'KILL', server_info[:pid] ) while sleep 0.1
         rescue Errno::ESRCH
             server_info.delete(:pid)
+
+            socket = port_to_socket( server_info[:port] )
+            if File.exist?( socket )
+                File.delete socket
+            end
+
             return true
         end
     end
@@ -91,12 +97,14 @@ class Servers
     def available_port
         loop do
             port = 5555 + rand( 9999 )
+
             begin
                 socket = ::Socket.new( :INET, :STREAM, 0 )
                 socket.bind( ::Socket.sockaddr_in( port, '127.0.0.1' ) )
                 socket.close
-                return port
-            rescue Errno::EADDRINUSE => e
+
+                return port if !File.exist?( port_to_socket( port ) )
+            rescue Errno::EADDRINUSE
             end
         end
     end

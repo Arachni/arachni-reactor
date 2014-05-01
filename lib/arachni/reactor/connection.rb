@@ -39,49 +39,71 @@ class Connection
     # @return   [Hash]
     #   Peer address information:
     #
-    #   * Without `resolve`:
+    #   * IP socket:
+    #       * Without `resolve`:
+    #
+    #               {
+    #                   protocol:   'AF_INET',
+    #                   port:       10314,
+    #                   hostname:   '127.0.0.1',
+    #                   ip_address: '127.0.0.1'
+    #               }
+    #
+    #       * With `resolve`:
+    #
+    #               {
+    #                   protocol:   'AF_INET',
+    #                   port:       10314,
+    #                   hostname:   'localhost',
+    #                   ip_address: '127.0.0.1'
+    #               }
+    #
+    #   * UNIX-domain socket:
     #
     #           {
-    #               protocol:   "AF_INET",
-    #               port:       10314,
-    #               hostname:   "127.0.0.1",
-    #               ip_address: "127.0.0.1"
+    #               protocol: 'AF_UNIX',
+    #               path:     '/tmp/my-socket'
     #           }
-    #
-    #   * With `resolve`:
-    #
-    #           {
-    #               protocol:   "AF_INET",
-    #               port:       10314,
-    #               hostname:   "localhost",
-    #               ip_address: "127.0.0.1"
-    #           }
-    def peer_ip_address_info( resolve = false )
-        protocol, port, hostname, ip_address = @socket.to_io.peeraddr( resolve )
-        {
-            protocol:   protocol,
-            port:       port,
-            hostname:   hostname,
-            ip_address: ip_address
-        }
+    def peer_address_info( resolve = false )
+        if @socket.to_io.is_a? UNIXSocket
+            protocol, _ = @socket.to_io.peeraddr
+            {
+                protocol: protocol,
+                path:     @socket.to_io.path
+            }
+        else
+            protocol, port, hostname, ip_address = @socket.to_io.peeraddr( resolve )
+            {
+                protocol:   protocol,
+                port:       port,
+                hostname:   hostname,
+                ip_address: ip_address
+            }
+        end
+    end
+
+    # @return   [String]
+    #   Peer's IP address or socket path.
+    def peer_address
+        peer_ip_address || peer_address_info[:path]
     end
 
     # @return   [String]
     #   Peer's IP address.
     def peer_ip_address
-        peer_ip_address_info[:ip_address]
+        peer_address_info[:ip_address]
     end
 
     # @return   [String]
     #   Peer's hostname.
     def peer_hostname
-        peer_ip_address_info(true)[:hostname]
+        peer_address_info(true)[:hostname]
     end
 
     # @return   [String]
     #   Peer's port.
     def peer_port
-        peer_ip_address_info[:port]
+        peer_address_info[:port]
     end
 
     # @note The data will be buffered and sent at the next {Reactor} loop iteration.

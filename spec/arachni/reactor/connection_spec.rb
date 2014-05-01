@@ -3,7 +3,12 @@ require 'spec_helper'
 describe Arachni::Reactor::Connection do
     before :all do
         @host, @port = Servers.start( :echo )
+
+        _, port = Servers.start( :echo_unix )
+        @unix_socket = port_to_socket( port )
     end
+
+    let(:unix_socket) { unix_connect( @unix_socket ) }
 
     let(:echo_client) { tcp_connect( @host, @port ) }
     let(:echo_client_handler) { EchoClient.new }

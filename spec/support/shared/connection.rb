@@ -57,32 +57,50 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
-    describe '#peer_ip_address_info' do
-        let(:connection) { echo_client_handler }
-        let(:role) { :client }
-        let(:socket) { client_socket }
+    describe '#peer_address_info' do
+        context 'when using an IP socket' do
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { client_socket }
 
-        it 'returns peer address information' do
-            s = peer_server_socket
-            configured
+            it 'returns IP address information' do
+                s = peer_server_socket
+                configured
 
-            Thread.new do
-                s = s.accept
+                Thread.new do
+                    s = s.accept
+                end
+
+                IO.select( nil, [configured.socket] )
+
+                info = {}
+                info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr
+                configured.peer_address_info.should == info
+
+                info = {}
+                info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr(false)
+                configured.peer_address_info(false).should == info
+
+                info = {}
+                info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr(true)
+                configured.peer_address_info(true).should == info
             end
+        end
 
-            IO.select( nil, [configured.socket] )
+        context 'when using UNIX-domain socket' do
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { unix_socket }
 
-            info = {}
-            info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr
-            configured.peer_ip_address_info.should == info
+            it 'returns socket information' do
+                configured
 
-            info = {}
-            info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr(false)
-            configured.peer_ip_address_info(false).should == info
+                IO.select( nil, [configured.socket] )
 
-            info = {}
-            info[:protocol], info[:port], info[:hostname], info[:ip_address] = s.to_io.addr(true)
-            configured.peer_ip_address_info(true).should == info
+                info = {}
+                info[:protocol], info[:path] = 'AF_UNIX', socket.path
+                configured.peer_address_info.should == info
+            end
         end
     end
 

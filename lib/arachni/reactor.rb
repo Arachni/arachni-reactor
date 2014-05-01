@@ -62,6 +62,13 @@ class Reactor
         def global
             @reactor ||= new
         end
+
+        def stop
+            return if !@reactor
+
+            @reactor.stop
+            @reactor = nil
+        end
     end
 
     # @param    [Hash]  options
@@ -133,8 +140,8 @@ class Reactor
                 attach connection
             end
         rescue Connection::Error => e
-            # We cannot attach a connection without a socket but a failed connection
-            # may want to retry or stop the Reactor.
+            # We cannot attach a connection without a socket but a failed
+            # connection may want to retry or stop the Reactor.
             connection.reactor = self
             connection.close e
         end
@@ -238,8 +245,8 @@ class Reactor
         end
 
         @tasks.clear
-        close_connections
         shutdown_server
+        close_connections
 
         @ticks  = 0
         @thread = nil
@@ -481,7 +488,15 @@ class Reactor
     def shutdown_server
         return if !@server
 
-        @server.close
+        path = nil
+        if @server.socket && (io = @server.socket.to_io).is_a?( UNIXSocket )
+            path = io.path
+        end
+
+        @server.close rescue nil
+
+        File.delete( path ) if path
+
         @server = @server_handler = nil
     end
 
