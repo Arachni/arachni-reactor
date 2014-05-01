@@ -89,13 +89,25 @@ class Connection
     # @param    [String]    data
     #   Data to send to the peer.
     def send_data( data )
-        @send_buffer << data
+        send_buffer << data
     end
 
-    # Called after the TCP connection has been established.
+    # Called after the connection has been established.
     #
     # @abstract
     def on_connect
+    end
+
+    # Called after the connection has been attached to a {#reactor}.
+    #
+    # @abstract
+    def on_attach
+    end
+
+    # Called right the connection is detached from the {#reactor}.
+    #
+    # @abstract
+    def on_detach
     end
 
     # @note If a connection could not be established no {#socket} may be
@@ -107,7 +119,7 @@ class Connection
     #   Reason for the close.
     #
     # @abstract
-    def on_close( reason = nil )
+    def on_close( reason )
     end
 
     # Called when data are available.
@@ -169,7 +181,7 @@ class Connection
     #   `true` if the connection has {#send_data outgoing data} that have not
     #   yet been {#write written}, `false` otherwise.
     def has_outgoing_data?
-        !@send_buffer.empty?
+        !send_buffer.empty?
     end
 
     # @note Will call {#on_write} every time any of the buffer is consumed,
@@ -249,8 +261,8 @@ class Connection
         return if !accepted = socket_accept
 
         connection = @server_handler.call
-        connection.reactor = @reactor
         connection.configure accepted, :server
+        @reactor.attach connection
         connection
     end
 
@@ -267,16 +279,16 @@ class Connection
         @role           = role
         @server_handler = server_handler
 
-        @send_buffer = ''
-
         on_connect
-
-        @reactor.attach self
 
         nil
     end
 
     private
+
+    def send_buffer
+        @send_buffer ||= ''
+    end
 
     # Accepts a new client connection.
     #

@@ -4,7 +4,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         if @reactor.running?
             @reactor.stop
-            sleep 0.1 while @reactor.running?
+            @reactor.block
         end
 
         @reactor = nil
@@ -38,12 +38,15 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         it 'attaches it to the reactor' do
             # Just to initialize it.
             peer_server_socket
-            configured
 
-            c_socket, c_connection = reactor.connections.first.to_a
+            reactor.run_block do
+                reactor.attach configured
 
-            c_socket.to_io.should == socket
-            c_connection.should == connection
+                c_socket, c_connection = reactor.connections.first.to_a
+
+                c_socket.to_io.should == socket
+                c_connection.should == connection
+            end
         end
 
         it 'calls #on_connect' do
@@ -142,6 +145,36 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
+    describe '#on_attach' do
+        let(:socket) { client_socket }
+        let(:role) { :client }
+
+        it 'is called when the connection gets attached to a Reactor' do
+            peer_server_socket
+            configured
+
+            reactor.run_in_thread
+
+            configured.should receive(:on_attach)
+            reactor.attach connection
+        end
+    end
+
+    describe '#on_detach' do
+        let(:socket) { client_socket }
+        let(:role) { :client }
+
+        it 'is called when the connection gets detached to a Reactor' do
+            peer_server_socket
+            configured
+
+            reactor.run_in_thread
+
+            configured.should receive(:on_detach)
+            reactor.detach connection
+        end
+    end
+
     describe '#send_data' do
         let(:connection) { echo_client_handler }
         let(:role) { :client }
@@ -175,6 +208,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         it 'accepts a new client connection' do
             configured
+            reactor.run_in_thread
 
             client = nil
 
@@ -184,9 +218,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 q << client.write( data )
             end
 
-            while !server = configured.accept
-                IO.select [configured.socket]
-            end
+            IO.select [configured.socket]
+            server = configured.accept
 
             server.should be_kind_of connection.class
 
@@ -245,6 +278,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             it 'accepts a new client connection' do
                 configured
+                reactor.run_in_thread
 
                 client = nil
 
@@ -354,6 +388,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         context 'when the connection has been closed' do
             it 'returns true' do
+                reactor.run_in_thread
                 configured.close
                 configured.should be_closed
             end
@@ -371,6 +406,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         let(:socket) { echo_client }
 
         it 'closes the #socket' do
+            reactor.run_in_thread
             configured.socket.should receive(:close)
             configured.close_without_callback
         end
@@ -378,12 +414,16 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         it 'detaches the connection from the reactor' do
             configured
 
-            reactor.connections.should be_any
-            configured.close_without_callback
-            reactor.connections.should be_empty
+            reactor.run_block do
+                reactor.attach configured
+                reactor.connections.should be_any
+                configured.close_without_callback
+                reactor.connections.should be_empty
+            end
         end
 
         it 'does not call #on_close' do
+            reactor.run_in_thread
             configured.should_not receive(:on_close)
             configured.close_without_callback
         end
@@ -392,6 +432,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
     describe '#close' do
         let(:role) { :client }
         let(:socket) { echo_client }
+
+        before(:each) { reactor.run_in_thread }
 
         it 'calls #close_without_callback' do
             configured.should receive(:close_without_callback)

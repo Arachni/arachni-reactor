@@ -1,12 +1,18 @@
 server = unix_ssl_server( port_to_socket( $options[:port] ) )
 
 loop do
-    socket = server.accept rescue next
+    socket = nil
+    begin
+        socket = server.accept
+    rescue => e
+        # ap e
+        next
+    end
 
     Thread.new do
         begin
             loop do
-                next if (line = socket.gets).empty?
+                next if (line = socket.gets).to_s.empty?
                 socket.write( line )
             end
         rescue EOFError, Errno::EPIPE

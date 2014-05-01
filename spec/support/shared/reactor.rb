@@ -7,7 +7,7 @@ shared_examples_for 'Arachni::Reactor' do
 
         if @reactor.running?
             @reactor.stop
-            sleep 0.1 while @reactor.running?
+            @reactor.block
         end
 
         @reactor = nil
@@ -107,6 +107,22 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#run_in_thread' do
+        it 'runs the Reactor in a Thread' do
+            thread = subject.run_in_thread
+            subject.should be_running
+            thread.should_not == Thread.current
+            subject.thread.should == thread
+        end
+
+        context 'when already running' do
+            it "raises #{klass::Error::AlreadyRunning}" do
+                subject.run_in_thread
+                expect { subject.run_in_thread }.to raise_error klass::Error::AlreadyRunning
+            end
+        end
+    end
+
     describe '#run_block' do
         it 'runs the reactor loop just for the given block' do
             running = false
@@ -127,37 +143,7 @@ shared_examples_for 'Arachni::Reactor' do
         context 'when already running' do
             it "raises #{klass::Error::AlreadyRunning}" do
                 run_reactor_in_thread
-                sleep 0.1
                 expect { subject.run_block{} }.to raise_error klass::Error::AlreadyRunning
-            end
-        end
-    end
-
-    describe '#thread' do
-        context 'when the reactor is' do
-            context 'not running' do
-                it 'returns nil' do
-                    subject.thread.should be_nil
-                end
-            end
-
-            context 'running' do
-                it 'returns the loop thread' do
-                    t = run_reactor_in_thread
-                    sleep 1
-                    subject.thread.should == t
-                end
-            end
-
-            context 'stopped' do
-                it 'sets it to nil' do
-                    run_reactor_in_thread
-                    sleep 1
-                    subject.stop
-                    sleep 0.1 while subject.running?
-
-                    subject.thread.should be_nil
-                end
             end
         end
     end
@@ -167,12 +153,13 @@ shared_examples_for 'Arachni::Reactor' do
             counted_ticks  = 0
             reactor_thread = nil
 
+            thread = run_reactor_in_thread
+
             subject.on_tick do
                 reactor_thread = Thread.current
                 counted_ticks += 1
             end
 
-            thread = run_reactor_in_thread
             sleep 1
 
             subject.ticks.should == counted_ticks
@@ -180,6 +167,14 @@ shared_examples_for 'Arachni::Reactor' do
             reactor_thread.should be_kind_of Thread
             reactor_thread.should_not == Thread.current
             thread.should == reactor_thread
+        end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.on_tick{}
+                end.to raise_error klass::Error::NotRunning
+            end
         end
     end
 
@@ -214,14 +209,10 @@ shared_examples_for 'Arachni::Reactor' do
         end
 
         context 'when the reactor is not running' do
-            it 'schedules it to be run at the next tick'do
-                called = false
-                subject.schedule do
-                    called = subject.in_same_thread?
-                end
-
-                subject.run_block{}
-                called.should be_true
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.schedule{}
+                end.to raise_error klass::Error::NotRunning
             end
         end
     end
@@ -241,6 +232,14 @@ shared_examples_for 'Arachni::Reactor' do
             reactor_thread.should_not == Thread.current
             thread.should == reactor_thread
         end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.next_tick{}
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
     end
 
     describe '#at_interval' do
@@ -248,19 +247,28 @@ shared_examples_for 'Arachni::Reactor' do
             counted_ticks  = 0
             reactor_thread = nil
 
+            thread = run_reactor_in_thread
+
             subject.at_interval 0.5 do
                 reactor_thread = Thread.current
                 counted_ticks += 1
             end
 
-            thread = run_reactor_in_thread
             sleep 2
 
-            counted_ticks.should == 4
+            counted_ticks.should == 3
 
             reactor_thread.should be_kind_of Thread
             reactor_thread.should_not == Thread.current
             thread.should == reactor_thread
+        end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.at_interval(1){}
+                end.to raise_error klass::Error::NotRunning
+            end
         end
     end
 
@@ -270,14 +278,15 @@ shared_examples_for 'Arachni::Reactor' do
             reactor_thread = nil
             call_time      = nil
 
+            thread = run_reactor_in_thread
+
             subject.delay 1 do
                 reactor_thread = Thread.current
                 call_time      = Time.now
                 counted_ticks += 1
             end
 
-            thread = run_reactor_in_thread
-            sleep 2
+            sleep 3
 
             (Time.now - call_time).to_i.should == 1
             counted_ticks.should == 1
@@ -286,14 +295,43 @@ shared_examples_for 'Arachni::Reactor' do
             reactor_thread.should_not == Thread.current
             thread.should == reactor_thread
         end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.delay(1){}
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
     end
 
     describe '#thread' do
-        it 'returns the thread of the reactor loop' do
-            thread = run_reactor_in_thread
+        context 'when the reactor is' do
+            context 'not running' do
+                it 'returns nil' do
+                    subject.thread.should be_nil
+                end
+            end
 
-            subject.thread.should == thread
-            subject.thread.should_not == Thread.current
+            context 'running' do
+                it 'returns the thread of the reactor loop' do
+                    thread = reactor.run_in_thread
+
+                    subject.thread.should == thread
+                    subject.thread.should_not == Thread.current
+                end
+            end
+
+            context 'stopped' do
+                it 'sets it to nil' do
+                    reactor.run_in_thread
+                    sleep 1
+                    subject.stop
+                    sleep 0.1 while subject.running?
+
+                    subject.thread.should be_nil
+                end
+            end
         end
     end
 
@@ -321,7 +359,7 @@ shared_examples_for 'Arachni::Reactor' do
         end
         context 'when the reactor is not running' do
             it "raises #{klass::Error::NotRunning}" do
-                expect {subject.in_same_thread? }.to raise_error klass::Error::NotRunning
+                expect { subject.in_same_thread? }.to raise_error klass::Error::NotRunning
             end
         end
     end
@@ -363,11 +401,7 @@ shared_examples_for 'Arachni::Reactor' do
 
     describe '#stop' do
         it 'stops the reactor' do
-            run_reactor_in_thread
-
-            Timeout.timeout 10 do
-                sleep 0.1 while !subject.running?
-            end
+            subject.run_in_thread
 
             subject.should be_running
             subject.stop
@@ -383,55 +417,112 @@ shared_examples_for 'Arachni::Reactor' do
     describe '#connect' do
         context 'when using UNIX domain sockets' do
             it "returns #{klass::Connection}" do
-                subject.connect( @unix_socket, echo_client_handler ).should be_kind_of klass::Connection
+                subject.run_block do
+                    subject.connect( @unix_socket, echo_client_handler ).should be_kind_of klass::Connection
+                end
             end
 
             it 'establishes a connection' do
-                connection = subject.connect( @unix_socket, echo_client_handler )
-                connection.send_data data
-                subject.run
+                outside_thread = Thread.current
+                subject.run do
+                    Thread.current[:outside_thread] = outside_thread
+                    Thread.current[:data] = data
 
-                connection.received_data.should == data
+                    subject.connect( @unix_socket, echo_client_handler ) do |c|
+                        def c.on_connect
+                            super
+                            send_data Thread.current[:data]
+                        end
+
+                        def c.on_close( _ )
+                            Thread.current[:outside_thread][:received_data] = received_data
+                        end
+                    end
+                end
+
+                outside_thread[:received_data].should == data
             end
 
             context 'when the socket is invalid' do
                 it "calls #on_close with #{klass::Connection::Error::HostNotFound}" do
-                    connection = subject.connect( 'blahblah', echo_client_handler )
-                    subject.run
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
 
-                    connection.error.should be_a_kind_of klass::Connection::Error::HostNotFound
+                        subject.connect( 'blahblah', echo_client_handler ) do |c|
+                            def c.on_close( reason )
+                                Thread.current[:outside_thread][:error] = reason
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    Thread.current[:outside_thread][:error].should be_a_kind_of klass::Connection::Error::HostNotFound
                 end
             end
         end
 
         context 'when using TCP sockets' do
             it "returns #{klass::Connection}" do
-                subject.connect( @host, @port, echo_client_handler ).should be_kind_of klass::Connection
+                subject.run_block do
+                    subject.connect( @host, @port, echo_client_handler ).should be_kind_of klass::Connection
+                end
             end
 
             it 'establishes a connection' do
-                connection = subject.connect( @host, @port, echo_client_handler )
-                connection.send_data data
-                subject.run
+                outside_thread = Thread.current
+                subject.run do
+                    Thread.current[:outside_thread] = outside_thread
+                    Thread.current[:data] = data
 
-                connection.received_data.should == data
+                    subject.connect( @host, @port, echo_client_handler ) do |c|
+                        def c.on_connect
+                            super
+                            send_data Thread.current[:data]
+                        end
+
+                        def c.on_close( _ )
+                            Thread.current[:outside_thread][:received_data] = received_data
+                        end
+                    end
+                end
+
+                outside_thread[:received_data].should == data
             end
 
             context 'when the host is invalid' do
                 it "calls #on_close with #{klass::Connection::Error::HostNotFound}" do
-                    connection = subject.connect( 'blahblah', 9876, echo_client_handler )
-                    subject.run
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
 
-                    connection.error.should be_a_kind_of klass::Connection::Error::HostNotFound
+                        subject.connect( 'blahblah', 9876, echo_client_handler ) do |c|
+                            def c.on_close( reason )
+                                Thread.current[:outside_thread][:error] = reason
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    Thread.current[:outside_thread][:error].should be_a_kind_of klass::Connection::Error::HostNotFound
                 end
             end
 
             context 'when the port is invalid' do
                 it "calls #on_close with #{klass::Connection::Error::Refused}" do
-                    connection = subject.connect( @host, @port + 1, echo_client_handler )
-                    subject.run
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
 
-                    connection.error.should be_a_kind_of klass::Connection::Error::Refused
+                        subject.connect( @host, @port + 1, echo_client_handler ) do |c|
+                            def c.on_close( reason )
+                                Thread.current[:outside_thread][:error] = reason
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    Thread.current[:outside_thread][:error].should be_a_kind_of klass::Connection::Error::Refused
                 end
             end
         end
@@ -440,9 +531,18 @@ shared_examples_for 'Arachni::Reactor' do
             it 'initializes the handler with them' do
                 options = [:blah, { some: 'stuff' }]
 
-                connection = subject.connect( @host, @port, echo_client_handler, *options )
+                subject.run_block do
+                    subject.connect( @host, @port, echo_client_handler, *options ).
+                        initialization_args.should == options
+                end
+            end
+        end
 
-                connection.initialization_args.should == options
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.connect( 'blahblah', echo_client_handler )
+                end.to raise_error klass::Error::NotRunning
             end
         end
     end
@@ -454,15 +554,15 @@ shared_examples_for 'Arachni::Reactor' do
 
         context 'when using UNIX domain sockets' do
             it "returns #{klass::Connection}" do
-                subject.listen( unix_socket, echo_server_handler ).should be_kind_of klass::Connection
+                subject.run_block do
+                    subject.listen( unix_socket, echo_server_handler ).should be_kind_of klass::Connection
+                end
             end
 
             it 'listens for incoming connections' do
+                subject.run_in_thread
+
                 subject.listen( unix_socket, echo_server_handler )
-
-                run_reactor_in_thread
-
-                sleep 0.1 while !subject.running?
 
                 @socket = unix_writer.call( unix_socket, data )
                 @socket.read( data.size ).should == data
@@ -470,6 +570,7 @@ shared_examples_for 'Arachni::Reactor' do
 
             context 'when the socket is invalid' do
                 it "raises #{klass::Connection::Error::Permission}" do
+                    subject.run_in_thread
                     expect do
                         subject.listen( '/socket', echo_server_handler )
                     end.to raise_error klass::Connection::Error::Permission
@@ -479,15 +580,15 @@ shared_examples_for 'Arachni::Reactor' do
 
         context 'when using TCP sockets' do
             it "returns #{klass::Connection}" do
-                subject.listen( host, port, echo_server_handler ).should be_kind_of klass::Connection
+                subject.run_block do
+                    subject.listen( host, port, echo_server_handler ).should be_kind_of klass::Connection
+                end
             end
 
             it 'listens for incoming connections' do
+                subject.run_in_thread
+
                 subject.listen( host, port, echo_server_handler )
-
-                run_reactor_in_thread
-
-                sleep 0.1 while !subject.running?
 
                 @socket = tcp_writer.call( host, port, data )
                 @socket.read( data.size ).should == data
@@ -495,6 +596,8 @@ shared_examples_for 'Arachni::Reactor' do
 
             context 'when the host is invalid' do
                 it "raises #{klass::Connection::Error::HostNotFound}" do
+                    subject.run_in_thread
+
                     expect do
                         subject.listen( 'host', port, echo_server_handler )
                     end.to raise_error klass::Connection::Error::HostNotFound
@@ -503,6 +606,8 @@ shared_examples_for 'Arachni::Reactor' do
 
             context 'when the port is invalid' do
                 it "raises #{klass::Connection::Error::Permission}" do
+                    subject.run_in_thread
+
                     expect do
                         subject.listen( host, 1, echo_server_handler )
                     end.to raise_error klass::Connection::Error::Permission
@@ -514,14 +619,22 @@ shared_examples_for 'Arachni::Reactor' do
             it 'initializes the handler with them' do
                 options = [:blah, { some: 'stuff' }]
 
-                subject.listen( host, port, echo_server_handler, *options )
-                run_reactor_in_thread
+                subject.run_in_thread
 
-                sleep 0.1 while !subject.running?
+                subject.listen( host, port, echo_server_handler, *options )
 
                 @socket = tcp_writer.call( host, port, data )
                 subject.connections.values.first.initialization_args.should == options
             end
         end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.listen( host, port, echo_server_handler )
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
+
     end
 end

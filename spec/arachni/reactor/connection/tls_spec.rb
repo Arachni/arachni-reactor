@@ -96,15 +96,14 @@ describe Arachni::Reactor::Connection::TLS do
                                 received_data = received
                             end
                         )
-                        reactor.listen( host, port, TLSHandler, options )
 
-                        t = Thread.new do
-                            reactor.run
-                        end
+                        reactor.run_in_thread
+
+                        reactor.listen( host, port, TLSHandler, options )
 
                         client.write data
                         reactor.stop
-                        t.join
+                        reactor.block
 
                         received_data.should == data
                     end
@@ -121,15 +120,14 @@ describe Arachni::Reactor::Connection::TLS do
                                 error ||= e
                             end
                         )
-                        reactor.listen( host, port, TLSHandler, options )
 
-                        Thread.new do
-                            reactor.run
-                        end
+                        reactor.run_in_thread
+
+                        reactor.listen( host, port, TLSHandler, options )
 
                         expect { client }.to raise_error OpenSSL::SSL::SSLError
 
-                        sleep 0.1 while reactor.running?
+                        reactor.block
 
                         error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
@@ -150,15 +148,14 @@ describe Arachni::Reactor::Connection::TLS do
                                     received_data = received
                                 end
                             )
-                            reactor.listen( host, port, TLSHandler, options )
 
-                            t = Thread.new do
-                                reactor.run
-                            end
+                            reactor.run_in_thread
+
+                            reactor.listen( host, port, TLSHandler, options )
 
                             client.write data
                             reactor.stop
-                            t.join
+                            reactor.block
 
                             received_data.should == data
                         end
@@ -175,15 +172,12 @@ describe Arachni::Reactor::Connection::TLS do
                                     error ||= e
                                 end
                             )
+
+                            reactor.run_in_thread
+
                             reactor.listen( host, port, TLSHandler, options )
 
-                            Thread.new do
-                                reactor.run
-                            end
-
                             expect { client }.to raise_error OpenSSL::SSL::SSLError
-
-                            sleep 0.1 while reactor.running?
 
                             error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                         end
@@ -201,15 +195,12 @@ describe Arachni::Reactor::Connection::TLS do
                                 error ||= e
                             end
                         )
+
+                        reactor.run_in_thread
+
                         reactor.listen( host, port, TLSHandler, options )
 
-                        Thread.new do
-                            reactor.run
-                        end
-
                         expect { client }.to raise_error OpenSSL::SSL::SSLError
-
-                        sleep 0.1 while reactor.running?
 
                         error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
@@ -238,11 +229,13 @@ describe Arachni::Reactor::Connection::TLS do
                             reactor.stop
                         end
 
+                        reactor.run_in_thread
+
                         connection = reactor.connect( host, port, TLSHandler )
                         connection.send_data data
-                        reactor.run
 
-                        t.join
+                        reactor.block
+
                         received.should == data
                     end
                 end
@@ -257,8 +250,9 @@ describe Arachni::Reactor::Connection::TLS do
                             server.accept
                         end
 
+                        reactor.run_in_thread
                         connection = reactor.connect( host, port, TLSHandler )
-                        reactor.run
+                        reactor.block
 
                         connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
@@ -274,11 +268,12 @@ describe Arachni::Reactor::Connection::TLS do
                                 reactor.stop
                             end
 
+                            reactor.run_in_thread
+
                             connection = reactor.connect( host, port, TLSHandler, client_valid_ssl_options )
                             connection.send_data data
-                            reactor.run
 
-                            t.join
+                            reactor.block
                             received.should == data
                         end
                     end
@@ -289,8 +284,9 @@ describe Arachni::Reactor::Connection::TLS do
                                 server.accept
                             end
 
+                            reactor.run_in_thread
                             connection = reactor.connect( host, port, TLSHandler, client_invalid_ssl_options )
-                            reactor.run
+                            reactor.block
 
                             connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                         end

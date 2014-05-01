@@ -63,8 +63,6 @@ class Reactor
             @reactor ||= new
         end
     end
-    # Global/Singleton Reactor at the ready!
-    global
 
     # @param    [Hash]  options
     # @option   [Integer,nil]   :max_tick_interval    (0.1)
@@ -82,6 +80,8 @@ class Reactor
         @ticks       = 0
         @thread      = nil
         @tasks       = Tasks.new
+
+        @done_signal = ::Queue.new
     end
 
     # @return   [Reactor::Queue]
@@ -113,11 +113,15 @@ class Reactor
     #
     # @return   [Connection]
     #   Connected instance of `handler`.
-    def connect( *args )
+    #
+    # @raise    (see #fail_if_not_running)
+    def connect( *args, &block )
+        fail_if_not_running
+
         options = determine_connection_options( *args )
 
         connection = options[:handler].new( *options[:handler_options] )
-        connection.reactor = self
+        block.call connection if block_given?
 
         begin
             Connection::Error.translate do
@@ -126,8 +130,12 @@ class Reactor
                     connect_tcp( options[:host], options[:port] )
 
                 connection.configure socket, :client
+                attach connection
             end
         rescue Connection::Error => e
+            # We cannot attach a connection without a socket but a failed connection
+            # may want to retry or stop the Reactor.
+            connection.reactor = self
             connection.close e
         end
 
@@ -162,22 +170,29 @@ class Reactor
     #
     # @return   [Connection]
     #   Listening instance of `handler`.
-    def listen( *args )
+    #
+    # @raise    (see #fail_if_not_running)
+    def listen( *args, &block )
+        fail_if_not_running
+
         options = determine_connection_options( *args )
 
         Connection::Error.translate do
             server_handler = proc do
-                options[:handler].new( *options[:handler_options] )
+                c = options[:handler].new( *options[:handler_options] )
+                c.reactor = self
+                block.call c if block_given?
+                c
             end
 
             @server = server_handler.call
-            @server.reactor = self
 
             socket = options[:unix_socket] ?
                 listen_unix( options[:unix_socket] ) :
                 listen_tcp( options[:host], options[:port] )
 
             @server.configure socket, :server, server_handler
+            attach @server
         end
 
         @server
@@ -209,6 +224,8 @@ class Reactor
             return
         end
 
+        @done_signal.clear
+
         @thread = Thread.current
 
         block.call if block_given?
@@ -226,6 +243,36 @@ class Reactor
 
         @ticks  = 0
         @thread = nil
+
+        @done_signal << nil
+    end
+
+    # {#run Runs} the Reactor in a thread and blocks until it is ready.
+    #
+    # @param    (see #run)
+    #
+    # @return   [Thread]
+    #   {Reactor#thread}
+    #
+    # @raise    (see #fail_if_running)
+    def run_in_thread( &block )
+        fail_if_running
+
+        Thread.new do
+            run(&block)
+        end
+
+        sleep 0.1 while !running?
+
+        thread
+    end
+
+    # Waits for the Reactor to stop {#running?}.
+    #
+    # @raise    (see #fail_if_not_running)
+    def block
+        fail_if_not_running
+        @done_signal.pop
     end
 
     # Starts the {#run Reactor loop}, blocks the current {#thread} while the
@@ -234,11 +281,10 @@ class Reactor
     # @param    [Block] block
     #   Block to call.
     #
-    # @raise    [Error::AlreadyRunning]
-    #   If already running.
+    # @raise    (see #fail_if_running)
     def run_block( &block )
         fail ArgumentError, 'Missing block.' if !block_given?
-        fail Error::AlreadyRunning, 'The reactor is already running.' if running?
+        fail_if_running
 
         run do
             block.call
@@ -249,6 +295,7 @@ class Reactor
     # @param    [Block] block
     #   Schedules a {Tasks::Persistent task} to be run at each tick.
     def on_tick( &block )
+        fail_if_not_running
         @tasks << Tasks::Persistent.new( &block )
         nil
     end
@@ -258,6 +305,8 @@ class Reactor
     #   the caller is {#in_same_thread? in the same thread}, or at the
     #   {#next_tick} otherwise.
     def schedule( &block )
+        fail_if_not_running
+
         if running? && in_same_thread?
             block.call
         else
@@ -270,6 +319,7 @@ class Reactor
     # @param    [Block] block
     #   Schedules a {Tasks::OneOff task} to be run at the next tick.
     def next_tick( &block )
+        fail_if_not_running
         @tasks << Tasks::OneOff.new( &block )
         nil
     end
@@ -281,6 +331,7 @@ class Reactor
     # @param    [Block] block
     #   Schedules a {Tasks::Periodic task} to be run at every `interval` seconds.
     def at_interval( interval, &block )
+        fail_if_not_running
         @tasks << Tasks::Periodic.new( interval, &block )
         nil
     end
@@ -292,6 +343,7 @@ class Reactor
     # @param    [Block] block
     #   Schedules a {Tasks::Delayed task} to be run in `time` seconds.
     def delay( time, &block )
+        fail_if_not_running
         @tasks << Tasks::Delayed.new( time, &block )
         nil
     end
@@ -305,8 +357,10 @@ class Reactor
     # @return   [Bool]
     #   `true` if the caller is in the same {#thread} as the {#run reactor loop},
     #   `false` otherwise.
+    #
+    # @raise    (see #fail_if_not_running)
     def in_same_thread?
-        fail Error::NotRunning if !running?
+        fail_if_not_running
         Thread.current == thread
     end
 
@@ -314,17 +368,39 @@ class Reactor
     #
     # @param    [Connection]    connection
     def attach( connection )
-        @connections[connection.socket] = connection
+        schedule do
+            @connections[connection.socket] = connection
+
+            connection.reactor = self
+            connection.on_attach
+        end
     end
 
     # Detaches a connection from the {Reactor} loop.
     #
     # @param    [Connection]    connection
     def detach( connection )
-        @connections.delete connection.socket
+        schedule do
+            connection.on_detach
+            connection.reactor = nil
+
+            @connections.delete connection.socket
+        end
     end
 
     private
+
+    # @raise    [Error::NotRunning]
+    #   If the Reactor is not {#running?}.
+    def fail_if_not_running
+        fail Error::NotRunning, 'Reactor is not running.' if !running?
+    end
+
+    # @raise    [Error::NotRunning]
+    #   If the Reactor is already {#running?}.
+    def fail_if_running
+        fail Error::AlreadyRunning, 'Reactor is already running.' if running?
+    end
 
     def process_connections
         # Get connections with available events - :read, :write, :error.
@@ -398,7 +474,7 @@ class Reactor
 
     # Closes all client connections, both ingress and egress.
     def close_connections
-        @connections.values.each(&:close_without_callback)
+        @connections.values.each(&:close)
     end
 
     # Shuts down the server.
