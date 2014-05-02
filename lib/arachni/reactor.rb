@@ -19,7 +19,8 @@ module Arachni
 #       that's probably what you want.
 #       * Rest of the class methods can be used to manage it.
 #   * Creating resources like:
-#       * Cross-thread, non-blocking {#create_queue Queue}.
+#       * Cross-thread, non-blocking {#create_queue Queues}.
+#       * Asynchronous, concurrent {#create_iterator Iterators}.
 #       * Network connections to:
 #           * {#connect Connect} to a server.
 #           * {#listen Listen} for clients.
@@ -54,7 +55,7 @@ class Reactor
 
     end
 
-    %w(connection tasks queue global).each do |f|
+    %w(connection tasks queue iterator global).each do |f|
         require_relative "reactor/#{f}"
     end
 
@@ -116,6 +117,16 @@ class Reactor
         @tasks       = Tasks.new
 
         @done_signal = ::Queue.new
+    end
+
+    # @return   [Reactor::Iterator]
+    #   New {Reactor::Iterator} with `self` as the scheduler.
+    # @param    [#to_a] list
+    #   List to iterate.
+    # @param    [Integer]   concurrency
+    #   Parallel workers to spawn.
+    def create_iterator( list, concurrency = 1 )
+        Reactor::Iterator.new( self, list, concurrency )
     end
 
     # @return   [Reactor::Queue]

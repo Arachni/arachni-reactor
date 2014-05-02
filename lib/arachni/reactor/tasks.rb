@@ -26,7 +26,7 @@ class Tasks
     def initialize
         super
 
-        @tasks = {}
+        @tasks = []
     end
 
     # @note Only {Base#hash unique} tasks will be included.
@@ -38,7 +38,7 @@ class Tasks
     def <<( task )
         synchronize do
             task.owner = self
-            @tasks[task.hash] = task
+            @tasks << task
         end
 
         self
@@ -48,7 +48,7 @@ class Tasks
     #   Task to check.
     # @return   [Bool]
     def include?( task )
-        @tasks.include? task.hash
+        @tasks.include? task
     end
 
     # @param    [Base]  task
@@ -57,7 +57,7 @@ class Tasks
     #   The task if it was included, `nil` otherwise.
     def delete( task )
         synchronize do
-            task = @tasks.delete( task.hash )
+            task = @tasks.delete( task )
             task.owner = nil if task
             task
         end
@@ -93,7 +93,7 @@ class Tasks
     #
     # @return   [Tasks] `self`
     def call
-        @tasks.values.each(&:call)
+        @tasks.dup.each(&:call)
         self
     end
 

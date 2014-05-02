@@ -53,14 +53,26 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#create_iterator' do
+        let(:iterator) { subject.create_iterator( 1..10 ) }
+
+        it 'creates a new Iterator' do
+            iterator.should be_kind_of klass::Iterator
+        end
+
+        it 'assigns this Reactor as the scheduler' do
+            iterator.reactor.should == subject
+        end
+    end
+
     describe '#create_queue' do
         let(:queue) { subject.create_queue }
 
-        it 'creates a new queue' do
+        it 'creates a new Queue' do
             queue.should be_kind_of klass::Queue
         end
 
-        it 'assigns this reactor as the scheduler' do
+        it 'assigns this Reactor as the scheduler' do
             queue.reactor.should == subject
         end
     end
