@@ -106,11 +106,11 @@ class Connection
         peer_address_info[:port]
     end
 
-    # @note The data will be buffered and sent at the next {Reactor} loop iteration.
+    # @note The data will be buffered and sent in future {Reactor} ticks.
     #
     # @param    [String]    data
     #   Data to send to the peer.
-    def send_data( data )
+    def write( data )
         write_buffer << data
     end
 
@@ -159,25 +159,10 @@ class Connection
     def on_write
     end
 
-    # Called after the {#send_data buffered data} have all been sent to the peer.
+    # Called after the {#write buffered data} have all been sent to the peer.
     #
     # @abstract
     def on_flush
-    end
-
-    # @note Will call {#on_close} right before closing the socket and detaching
-    #   from the Reactor.
-    #
-    # Closes the connection and {Reactor#detach detaches} it from the {Reactor}.
-    #
-    # @param    [Exception] reason
-    #   Reason for the close.
-    def close( reason = nil )
-        return if closed?
-
-        on_close reason
-        close_without_callback
-        nil
     end
 
     # @note Will not call {#on_close}.
@@ -200,10 +185,25 @@ class Connection
     end
 
     # @return   [Bool]
-    #   `true` if the connection has {#send_data outgoing data} that have not
+    #   `true` if the connection has {#write outgoing data} that have not
     #   yet been {#write written}, `false` otherwise.
     def has_outgoing_data?
         !write_buffer.empty?
+    end
+
+    # @note Will call {#on_close} right before closing the socket and detaching
+    #   from the Reactor.
+    #
+    # Closes the connection and {Reactor#detach detaches} it from the {Reactor}.
+    #
+    # @param    [Exception] reason
+    #   Reason for the close.
+    def close( reason = nil )
+        return if closed?
+
+        on_close reason
+        close_without_callback
+        nil
     end
 
     # @note Will call {#on_write} every time any of the buffer is consumed,
@@ -213,13 +213,13 @@ class Connection
     # Processes a `write` event for this connection.
     #
     # Consumes and writes {BLOCK_SIZE} amount of data from the the beginning of
-    # the {#send_data outgoing} buffer to the socket.
+    # the {#write} buffer to the socket.
     #
     # @return   [Integer]
-    #   Amount of the buffer written.
+    #   Amount of the buffer consumed.
     #
     # @private
-    def write
+    def _write
         chunk = @write_buffer.slice( 0, BLOCK_SIZE )
         total_written = 0
 
@@ -259,7 +259,7 @@ class Connection
     # Processes a `read` event for this connection.
     #
     # @private
-    def read
+    def _read
         return accept if @role == :server && @server_handler
 
         Error.translate do

@@ -242,7 +242,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                         reactor.run do
                             connection = reactor.connect( host, port, TLSHandler )
-                            connection.send_data data
+                            connection.write data
                         end
 
                         received.should == data
@@ -280,7 +280,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                             reactor.run do
                                 connection = reactor.connect( host, port, TLSHandler, client_valid_ssl_options )
-                                connection.send_data data
+                                connection.write data
                             end
 
                             received.should == data

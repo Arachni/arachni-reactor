@@ -492,7 +492,7 @@ class Reactor
         [selected.delete(:error)].flatten.compact.each(&:close)
 
         # Call the corresponding event on the connections.
-        selected.each { |event, connections| connections.each(&event) }
+        selected.each { |event, connections| connections.each(&"_#{event}".to_sym) }
     end
 
     def determine_connection_options( *args )

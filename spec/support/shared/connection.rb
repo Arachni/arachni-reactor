@@ -196,7 +196,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
-    describe '#send_data' do
+    describe '#write' do
         let(:connection) { echo_client_handler }
         let(:role) { :client }
         let(:socket) { client_socket }
@@ -209,10 +209,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 s = s.accept
             end
 
-            configured.send_data data
+            configured.write data
             while configured.has_outgoing_data?
                 IO.select( nil, [configured.socket] )
-                next if configured.write != 0
+                next if configured._write != 0
                 IO.select( [configured.socket] )
             end
 
@@ -270,7 +270,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
                 while configured.received_data.to_s.size != data.size
                     pre = configured.received_data.to_s.size
-                    configured.read
+                    configured._read
                     (configured.received_data.to_s.size - pre).should <= block_size
                 end
 
@@ -289,7 +289,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     s.flush
                 end
 
-                configured.read while !configured.received_data
+                configured._read while !configured.received_data
                 configured.received_data.should == data
             end
         end
@@ -312,7 +312,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 end
 
                 IO.select [configured.socket]
-                server = configured.read
+                server = configured._read
 
                 server.should be_kind_of connection.class
 
@@ -330,13 +330,13 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         let(:socket) { echo_client }
 
         it "consumes the send-buffer a maximum of #{Arachni::Reactor::Connection::BLOCK_SIZE} bytes at a time" do
-            configured.send_data data
+            configured.write data
 
             writes = 0
             while configured.has_outgoing_data?
 
                 IO.select( nil, [configured.socket] )
-                if (written = configured.write) == 0
+                if (written = configured._write) == 0
                     IO.select( [configured.socket], nil, nil, 1 )
                     next
                 end
@@ -349,13 +349,13 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
 
         it 'calls #on_write' do
-            configured.send_data data
+            configured.write data
 
             writes = 0
             while configured.has_outgoing_data?
 
                 IO.select( nil, [configured.socket] )
-                if configured.write == 0
+                if configured._write == 0
                     IO.select( [configured.socket] )
                     next
                 end
@@ -368,12 +368,12 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         context 'when the buffer is entirely consumed' do
             it 'calls #on_flush' do
-                configured.send_data data
+                configured.write data
 
                 while configured.has_outgoing_data?
                     IO.select( nil, [configured.socket] )
 
-                    if (written = configured.write) == 0
+                    if (written = configured._write) == 0
                         IO.select( [configured.socket] )
                         next
                     end
@@ -392,7 +392,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         context 'when the send-buffer is not empty' do
             it 'returns true' do
-                configured.send_data 'test'
+                configured.write 'test'
                 configured.has_outgoing_data?.should be_true
             end
         end

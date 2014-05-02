@@ -517,7 +517,7 @@ shared_examples_for 'Arachni::Reactor' do
                     subject.connect( @unix_socket, echo_client_handler ) do |c|
                         def c.on_connect
                             super
-                            send_data Thread.current[:data]
+                            write Thread.current[:data]
                         end
 
                         def c.on_close( _ )
@@ -564,7 +564,7 @@ shared_examples_for 'Arachni::Reactor' do
                     subject.connect( @host, @port, echo_client_handler ) do |c|
                         def c.on_connect
                             super
-                            send_data Thread.current[:data]
+                            write Thread.current[:data]
                         end
 
                         def c.on_close( _ )

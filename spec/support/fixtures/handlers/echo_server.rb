@@ -6,7 +6,7 @@ class EchoServer < Arachni::Reactor::Connection
     end
 
     def on_read( data )
-        send_data data
+        write data
     end
 
 end
