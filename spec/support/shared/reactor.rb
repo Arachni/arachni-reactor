@@ -35,7 +35,7 @@ shared_examples_for 'Arachni::Reactor' do
             klass.global.run_in_thread
             klass.stop
 
-            global.block
+            global.wait
         end
 
         it 'destroys the global instance' do
@@ -171,6 +171,29 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#wait' do
+        it 'waits for the reactor to stop running' do
+            subject.run_in_thread
+
+            start = Time.now
+            subject.delay 2 do
+                subject.stop
+            end
+            subject.wait
+
+            subject.should_not be_running
+            (Time.now - start).to_i.should == 2
+        end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.wait{}
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
+    end
+
     describe '#on_shutdown' do
         it 'calls the given blocks during shutdown' do
             subject.run_in_thread
@@ -187,7 +210,7 @@ shared_examples_for 'Arachni::Reactor' do
             count.should == 0
 
             subject.stop
-            subject.block
+            subject.wait
 
             count.should == 2
         end

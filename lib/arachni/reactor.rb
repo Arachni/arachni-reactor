@@ -319,8 +319,8 @@ class Reactor
     # Waits for the Reactor to stop {#running?}.
     #
     # @raise    (see #fail_if_not_running)
-    def block
-        return if !running?
+    def wait
+        fail_if_not_running
 
         @done_signal.pop
         true

@@ -111,7 +111,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                         client.write data
                         reactor.stop
-                        reactor.block
+                        reactor.wait rescue Arachni::Reactor::NotRunning
 
                         received_data.should == data
                     end
@@ -135,7 +135,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                         expect { client }.to raise_error OpenSSL::SSL::SSLError
 
-                        reactor.block
+                        reactor.wait rescue Arachni::Reactor::NotRunning
 
                         error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
@@ -185,7 +185,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                             expect { client }.to raise_error OpenSSL::SSL::SSLError
 
-                            reactor.block
+                            reactor.wait rescue Arachni::Reactor::NotRunning
 
                             error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                         end
@@ -210,7 +210,7 @@ describe Arachni::Reactor::Connection::TLS do
 
                         expect { client }.to raise_error OpenSSL::SSL::SSLError
 
-                        reactor.block
+                        reactor.wait rescue Arachni::Reactor::NotRunning
 
                         error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
