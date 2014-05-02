@@ -29,6 +29,7 @@ module Arachni
 #           * {#on_tick On every loop iteration}.
 #           * {#delay After a configured delay}.
 #           * {#at_interval Every few seconds}.
+#           * {#on_shutdown During shutdown}.
 #
 # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
 class Reactor
