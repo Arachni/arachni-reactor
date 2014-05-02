@@ -12,4 +12,10 @@ shared_examples_for 'Arachni::Reactor::Tasks::Base' do
         end
     end
 
+    describe '#to_proc' do
+        it 'returns the given Block' do
+            subject.to_proc.should be_kind_of Proc
+        end
+    end
+
 end

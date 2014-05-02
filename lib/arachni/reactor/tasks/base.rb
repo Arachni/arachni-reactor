@@ -38,6 +38,10 @@ class Base
         @owner.delete self
     end
 
+    def to_proc
+        @task
+    end
+
     def hash
         @task.hash
     end
