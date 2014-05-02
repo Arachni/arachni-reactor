@@ -69,6 +69,7 @@ class Reactor
     attr_reader   :connections
 
     # @return     [Integer]
+    #   Amount of ticks.
     attr_reader   :ticks
 
     DEFAULT_OPTIONS = {
@@ -102,10 +103,10 @@ class Reactor
     end
 
     # @param    [Hash]  options
-    # @option   [Integer,nil]   :max_tick_interval    (0.02)
+    # @option   options  [Integer,nil]   :max_tick_interval    (0.02)
     #   How long to wait for each tick when no connections are available for
     #   processing.
-    # @option   [Integer]   :select_timeout    (1)
+    # @option   options  [Integer]   :select_timeout    (1)
     #   How long to wait for socket activity before continuing to the next tick.
     def initialize( options = {} )
         options = DEFAULT_OPTIONS.merge( options )
@@ -254,7 +255,9 @@ class Reactor
         !!thread
     end
 
-    # Stops the {Reactor} {#run loop} at the next tick.
+    # Stops the {Reactor} {#run loop} {#schedule as soon as possible}.
+    #
+    # @raise    (see #fail_if_not_running)
     def stop
         schedule { @stop = true }
     end
@@ -346,6 +349,8 @@ class Reactor
 
     # @param    [Block] block
     #   Schedules a {Tasks::Persistent task} to be run at each tick.
+    #
+    # @raise    (see #fail_if_not_running)
     def on_tick( &block )
         fail_if_not_running
         @tasks << Tasks::Persistent.new( &block )
@@ -356,6 +361,8 @@ class Reactor
     #   Schedules a task to be run as soon as possible, either immediately if
     #   the caller is {#in_same_thread? in the same thread}, or at the
     #   {#next_tick} otherwise.
+    #
+    # @raise    (see #fail_if_not_running)
     def schedule( &block )
         fail_if_not_running
 
@@ -380,6 +387,8 @@ class Reactor
 
     # @param    [Block] block
     #   Schedules a {Tasks::OneOff task} to be run at the next tick.
+    #
+    # @raise    (see #fail_if_not_running)
     def next_tick( &block )
         fail_if_not_running
         @tasks << Tasks::OneOff.new( &block )
@@ -392,6 +401,8 @@ class Reactor
     #   Time in seconds.
     # @param    [Block] block
     #   Schedules a {Tasks::Periodic task} to be run at every `interval` seconds.
+    #
+    # @raise    (see #fail_if_not_running)
     def at_interval( interval, &block )
         fail_if_not_running
         @tasks << Tasks::Periodic.new( interval, &block )
@@ -404,6 +415,8 @@ class Reactor
     #   Time in seconds.
     # @param    [Block] block
     #   Schedules a {Tasks::Delayed task} to be run in `time` seconds.
+    #
+    # @raise    (see #fail_if_not_running)
     def delay( time, &block )
         fail_if_not_running
         @tasks << Tasks::Delayed.new( time, &block )
@@ -429,6 +442,8 @@ class Reactor
     # Attaches a connection to the {Reactor} loop.
     #
     # @param    [Connection]    connection
+    #
+    # @raise    (see #fail_if_not_running)
     def attach( connection )
         schedule do
             @connections[connection.socket] = connection
@@ -441,6 +456,8 @@ class Reactor
     # Detaches a connection from the {Reactor} loop.
     #
     # @param    [Connection]    connection
+    #
+    # @raise    (see #fail_if_not_running)
     def detach( connection )
         schedule do
             connection.on_detach
