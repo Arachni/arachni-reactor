@@ -171,6 +171,36 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#on_shutdown' do
+        it 'calls the given blocks during shutdown' do
+            subject.run_in_thread
+
+            count = 0
+            2.times do
+                subject.on_shutdown do
+                    count += 1
+                end
+            end
+
+            sleep 1
+
+            count.should == 0
+
+            subject.stop
+            subject.block
+
+            count.should == 2
+        end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.on_shutdown{}
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
+    end
+
     describe '#on_tick' do
         it "schedules a task to be run at each tick in the #{klass}#thread" do
             counted_ticks  = 0

@@ -119,7 +119,8 @@ class Reactor
         @thread      = nil
         @tasks       = Tasks.new
 
-        @done_signal = ::Queue.new
+        @shutdown_tasks = Tasks.new
+        @done_signal    = ::Queue.new
     end
 
     # @return   [Reactor::Iterator]
@@ -287,6 +288,8 @@ class Reactor
         shutdown_server
         close_connections
 
+        @shutdown_tasks.call
+
         @ticks  = 0
         @thread = nil
 
@@ -361,6 +364,16 @@ class Reactor
             next_tick(&block)
         end
 
+        nil
+    end
+
+    # @param    [Block] block
+    #   Schedules a {Tasks::OneOff task} to be run at {#stop shutdown}.
+    #
+    # @raise    (see #fail_if_not_running)
+    def on_shutdown( &block )
+        fail_if_not_running
+        @shutdown_tasks << Tasks::OneOff.new( &block )
         nil
     end
 
