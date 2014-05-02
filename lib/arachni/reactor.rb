@@ -172,6 +172,7 @@ class Reactor
         options = determine_connection_options( *args )
 
         connection = options[:handler].new( *options[:handler_options] )
+        connection.reactor = self
         block.call connection if block_given?
 
         begin

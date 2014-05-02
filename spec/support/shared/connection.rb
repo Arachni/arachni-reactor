@@ -203,6 +203,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         it 'appends the given data to the send-buffer' do
             s = peer_server_socket
+            reactor.run_in_thread
+
             configured
 
             t = Thread.new do
@@ -210,6 +212,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             end
 
             configured.write data
+
+            # Wait for the reactor to update the buffer.
+            sleep 0.1 while !configured.has_outgoing_data?
+
             while configured.has_outgoing_data?
                 IO.select( nil, [configured.socket] )
                 next if configured._write != 0
@@ -228,8 +234,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         let(:data) { "data\n" }
 
         it 'accepts a new client connection' do
-            configured
             reactor.run_in_thread
+            configured
 
             client = nil
 
@@ -324,17 +330,21 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
-    describe '#write' do
+    describe '#_write' do
+        before :each do
+            reactor.run_in_thread
+        end
+
         let(:connection) { echo_client_handler }
         let(:role) { :client }
         let(:socket) { echo_client }
 
         it "consumes the send-buffer a maximum of #{Arachni::Reactor::Connection::BLOCK_SIZE} bytes at a time" do
             configured.write data
+            sleep 0.1 while !configured.has_outgoing_data?
 
             writes = 0
             while configured.has_outgoing_data?
-
                 IO.select( nil, [configured.socket] )
                 if (written = configured._write) == 0
                     IO.select( [configured.socket], nil, nil, 1 )
@@ -350,6 +360,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         it 'calls #on_write' do
             configured.write data
+            sleep 0.1 while !configured.has_outgoing_data?
 
             writes = 0
             while configured.has_outgoing_data?
@@ -369,6 +380,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         context 'when the buffer is entirely consumed' do
             it 'calls #on_flush' do
                 configured.write data
+                sleep 0.1 while !configured.has_outgoing_data?
 
                 while configured.has_outgoing_data?
                     IO.select( nil, [configured.socket] )
@@ -392,7 +404,11 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         context 'when the send-buffer is not empty' do
             it 'returns true' do
+                reactor.run_in_thread
+
                 configured.write 'test'
+                sleep 0.1 while !configured.has_outgoing_data?
+
                 configured.has_outgoing_data?.should be_true
             end
         end

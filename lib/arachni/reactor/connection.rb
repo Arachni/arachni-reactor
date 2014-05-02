@@ -111,7 +111,9 @@ class Connection
     # @param    [String]    data
     #   Data to send to the peer.
     def write( data )
-        write_buffer << data
+        @reactor.schedule do
+            write_buffer << data
+        end
     end
 
     # Called after the connection has been established.
@@ -220,7 +222,7 @@ class Connection
     #
     # @private
     def _write
-        chunk = @write_buffer.slice( 0, BLOCK_SIZE )
+        chunk = write_buffer.slice( 0, BLOCK_SIZE )
         total_written = 0
 
         begin
@@ -228,7 +230,7 @@ class Connection
                 # Send out the buffer, **all** of it, or at least try to.
                 loop do
                     total_written += written = @socket.write_nonblock( chunk )
-                    @write_buffer.slice!( 0, written )
+                    write_buffer.slice!( 0, written )
 
                     # Call #on_write every time any of the buffer is consumed.
                     on_write
@@ -242,7 +244,7 @@ class Connection
         rescue IO::WaitReadable, IO::WaitWritable
         end
 
-        if @write_buffer.empty?
+        if write_buffer.empty?
             @socket.flush
             on_flush
         end
