@@ -11,6 +11,23 @@ require 'openssl'
 
 module Arachni
 
+# Reactor scheduler and and resource factory.
+#
+# You're probably interested in:
+#
+#   * Getting access to a shared and {.global globally accessible Reactor} --
+#       that's probably what you want.
+#       * Rest of the class methods can be used to manage it.
+#   * Creating resources like:
+#       * Network connections to:
+#           * {#connect Connect} to a server.
+#           * {#listen Listen} for clients.
+#       * Tasks to be scheduled:
+#           * {#schedule As soon as possible}.
+#           * {#on_tick On every loop iteration}.
+#           * {#delay After a configured delay}.
+#           * {#at_interval Every few seconds}.
+#
 # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
 class Reactor
 
@@ -36,7 +53,7 @@ class Reactor
 
     end
 
-    %w(connection tasks queue).each do |f|
+    %w(connection tasks queue global).each do |f|
         require_relative "reactor/#{f}"
     end
 
@@ -58,17 +75,26 @@ class Reactor
     class <<self
 
         # @return   [Reactor]
-        #   Singleton Reactor.
+        #   Lazy-loaded, globally accessible Reactor.
         def global
-            @reactor ||= new
+            @reactor ||= Global.instance
         end
 
+        # Stops the {.global global Reactor} instance and destroys it. The next
+        # call to {.global} will return a new instance.
         def stop
             return if !@reactor
 
-            @reactor.stop
+            global.stop rescue Error::NotRunning
+
+            # Admittedly not the cleanest solution, but that's the only way to
+            # force a Singleton to re-initialize -- and we want the Singleton to
+            # cleanly implement the pattern in a Thread-safe way.
+            global.class.instance_variable_set(:@singleton__instance__, nil)
+
             @reactor = nil
         end
+
     end
 
     # @param    [Hash]  options

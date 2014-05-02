@@ -23,6 +23,28 @@ shared_examples_for 'Arachni::Reactor' do
         it 'returns a Reactor' do
             klass.global.should be_kind_of klass
         end
+
+        it 'caches the instance' do
+            global = klass.global
+            klass.global.should == global
+        end
+    end
+
+    describe '.stop' do
+        it 'stops the global reactor' do
+            global = klass.global
+            klass.global.run_in_thread
+            klass.stop
+
+            global.block
+        end
+
+        it 'destroys the global instance' do
+            global = klass.global
+            klass.stop
+
+            klass.object_id.should_not == global.object_id
+        end
     end
 
     describe '#initialize' do
@@ -635,6 +657,5 @@ shared_examples_for 'Arachni::Reactor' do
                 end.to raise_error klass::Error::NotRunning
             end
         end
-
     end
 end
