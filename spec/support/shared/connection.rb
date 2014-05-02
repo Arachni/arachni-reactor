@@ -4,7 +4,6 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         if @reactor.running?
             @reactor.stop
-            @reactor.block
         end
 
         @reactor = nil
@@ -175,6 +174,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             configured.should receive(:on_attach)
             reactor.attach connection
+
+            sleep 1
         end
     end
 
@@ -190,6 +191,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             configured.should receive(:on_detach)
             reactor.detach connection
+
+            sleep 1
         end
     end
 
@@ -230,10 +233,9 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             client = nil
 
-            q = Queue.new
             Thread.new do
                 client = peer_client_socket
-                q << client.write( data )
+                client.write( data )
             end
 
             IO.select [configured.socket]
@@ -241,7 +243,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             server.should be_kind_of connection.class
 
-            server.socket.gets.should == data
+            IO.select [server.socket]
+
+            sleep 0.1 while !server.received_data
+            server.received_data.should == data
 
             client.close
         end
@@ -306,17 +311,16 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     q << client.write( data )
                 end
 
-                while !server = configured.read
-                    IO.select [configured.socket]
-                end
+                IO.select [configured.socket]
+                server = configured.read
 
                 server.should be_kind_of connection.class
 
-                server.socket.gets.should == data
+                sleep 0.1 while !server.received_data
+                server.received_data.should == data
 
                 client.close
             end
-
         end
     end
 

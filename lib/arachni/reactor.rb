@@ -71,7 +71,8 @@ class Reactor
     attr_reader   :ticks
 
     DEFAULT_OPTIONS = {
-        max_tick_interval: 0.1
+        select_timeout:    1,
+        max_tick_interval: 0.02
     }
 
     class <<self
@@ -100,14 +101,16 @@ class Reactor
     end
 
     # @param    [Hash]  options
-    # @option   [Integer,nil]   :max_tick_interval    (0.1)
-    #   Maximum amount of time for each iteration of the Reactor loop. Basically
-    #   sets the timeout value for the `Kernel.select` call as that's our only
-    #   constant blocker.
+    # @option   [Integer,nil]   :max_tick_interval    (0.02)
+    #   How long to wait for each tick when no connections are available for
+    #   processing.
+    # @option   [Integer]   :select_timeout    (1)
+    #   How long to wait for socket activity before continuing to the next tick.
     def initialize( options = {} )
         options = DEFAULT_OPTIONS.merge( options )
 
         @max_tick_interval = options[:max_tick_interval]
+        @select_timeout    = options[:select_timeout]
 
         # Socket => Connection
         @connections = {}
@@ -254,7 +257,7 @@ class Reactor
         schedule { @stop = true }
     end
 
-    # @note Will simply return if already {#running?}.
+    # @note Will {#schedule} the `block` and return if already {#running?}.
     # @note If already {#running?} and a `block` is given it will be forwarded
     #   to {#next_tick}.
     #
@@ -275,10 +278,13 @@ class Reactor
 
         block.call if block_given?
 
-        while !@stop
-            process_connections
-
+        loop do
             @tasks.call
+            break if @stop
+
+            process_connections
+            break if @stop
+
             @ticks += 1
         end
 
@@ -316,8 +322,10 @@ class Reactor
     #
     # @raise    (see #fail_if_not_running)
     def block
-        fail_if_not_running
+        return if !running?
+
         @done_signal.pop
+        true
     end
 
     # Starts the {#run Reactor loop}, blocks the current {#thread} while the
@@ -427,8 +435,6 @@ class Reactor
     def detach( connection )
         schedule do
             connection.on_detach
-            connection.reactor = nil
-
             @connections.delete connection.socket
         end
     end
@@ -448,6 +454,11 @@ class Reactor
     end
 
     def process_connections
+        if @connections.empty?
+            sleep @max_tick_interval
+            return
+        end
+
         # Get connections with available events - :read, :write, :error.
         selected = select_connections
 
@@ -547,12 +558,19 @@ class Reactor
     #       {Connection#has_outgoing_data? outgoing buffer).
     #   * `:error`
     def select_connections
-        grouped_sockets = select(
-            read_sockets,
-            write_sockets,
-            read_sockets, # Read sockets are actually all sockets.
-            @max_tick_interval
-        )
+        grouped_sockets =
+            begin
+                Connection::Error.translate do
+                    select(
+                        read_sockets,
+                        write_sockets,
+                        read_sockets, # Read sockets are actually all sockets.
+                        @select_timeout
+                    )
+                end
+            rescue Connection::Error
+            end
+
         return {} if !grouped_sockets
 
         {

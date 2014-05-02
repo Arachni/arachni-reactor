@@ -3,6 +3,7 @@ require 'spec_helper'
 class TLSHandler < Arachni::Reactor::Connection
     include TLS
 
+    attr_reader :received_data
     attr_reader :error
 
     def initialize( options = {} )
@@ -20,6 +21,8 @@ class TLSHandler < Arachni::Reactor::Connection
     end
 
     def on_data( data )
+        (@received_data ||= '' ) << data
+
         return if !@options[:on_data]
         @options[:on_data].call data
     end
@@ -159,9 +162,8 @@ describe Arachni::Reactor::Connection::TLS do
                             reactor.listen( host, port, TLSHandler, options )
 
                             client.write data
-                            reactor.stop
-                            reactor.block
 
+                            sleep 0.1 while !received_data
                             received_data.should == data
                         end
                     end
@@ -179,10 +181,11 @@ describe Arachni::Reactor::Connection::TLS do
                             )
 
                             reactor.run_in_thread
-
                             reactor.listen( host, port, TLSHandler, options )
 
                             expect { client }.to raise_error OpenSSL::SSL::SSLError
+
+                            reactor.block
 
                             error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                         end
@@ -207,6 +210,8 @@ describe Arachni::Reactor::Connection::TLS do
 
                         expect { client }.to raise_error OpenSSL::SSL::SSLError
 
+                        reactor.block
+
                         error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
                 end
@@ -228,18 +233,17 @@ describe Arachni::Reactor::Connection::TLS do
                 context 'and no options have been provided' do
                     it 'connects successfully' do
                         received = nil
-                        t = Thread.new do
+                        Thread.new do
                             s = server.accept
                             received = s.gets
+
                             reactor.stop
                         end
 
-                        reactor.run_in_thread
-
-                        connection = reactor.connect( host, port, TLSHandler )
-                        connection.send_data data
-
-                        reactor.block
+                        reactor.run do
+                            connection = reactor.connect( host, port, TLSHandler )
+                            connection.send_data data
+                        end
 
                         received.should == data
                     end
@@ -255,9 +259,10 @@ describe Arachni::Reactor::Connection::TLS do
                             server.accept
                         end
 
-                        reactor.run_in_thread
-                        connection = reactor.connect( host, port, TLSHandler )
-                        reactor.block
+                        connection = nil
+                        reactor.run do
+                            connection = reactor.connect( host, port, TLSHandler )
+                        end
 
                         connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                     end
@@ -273,12 +278,11 @@ describe Arachni::Reactor::Connection::TLS do
                                 reactor.stop
                             end
 
-                            reactor.run_in_thread
+                            reactor.run do
+                                connection = reactor.connect( host, port, TLSHandler, client_valid_ssl_options )
+                                connection.send_data data
+                            end
 
-                            connection = reactor.connect( host, port, TLSHandler, client_valid_ssl_options )
-                            connection.send_data data
-
-                            reactor.block
                             received.should == data
                         end
                     end
@@ -289,9 +293,10 @@ describe Arachni::Reactor::Connection::TLS do
                                 server.accept
                             end
 
-                            reactor.run_in_thread
-                            connection = reactor.connect( host, port, TLSHandler, client_invalid_ssl_options )
-                            reactor.block
+                            connection = nil
+                            reactor.run do
+                                connection = reactor.connect( host, port, TLSHandler, client_invalid_ssl_options )
+                            end
 
                             connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
                         end

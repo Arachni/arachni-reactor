@@ -7,7 +7,6 @@ shared_examples_for 'Arachni::Reactor' do
 
         if @reactor.running?
             @reactor.stop
-            @reactor.block
         end
 
         @reactor = nil
@@ -189,14 +188,20 @@ shared_examples_for 'Arachni::Reactor' do
 
             thread = run_reactor_in_thread
 
+            ticks = []
             subject.on_tick do
                 reactor_thread = Thread.current
-                counted_ticks += 1
+                ticks << subject.ticks
             end
 
             sleep 1
 
-            subject.ticks.should == counted_ticks
+            # Logged ticks should be sequential.
+            ticks.size.times do |i|
+                next if !ticks[i+1]
+
+                (ticks[i+1] - ticks[i]).should == 1
+            end
 
             reactor_thread.should be_kind_of Thread
             reactor_thread.should_not == Thread.current

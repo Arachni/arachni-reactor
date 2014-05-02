@@ -1,5 +1,34 @@
 require 'spec_helper'
 
+require 'spec_helper'
+
+class Handler < Arachni::Reactor::Connection
+    attr_reader :received_data
+    attr_reader :error
+
+    def initialize( options = {} )
+        @options = options
+    end
+
+    def on_close( error )
+        @error = error
+
+        if @options[:on_error]
+            @options[:on_error].call error
+        end
+
+        @reactor.stop
+    end
+
+    def on_data( data )
+        (@received_data ||= '' ) << data
+
+        return if !@options[:on_data]
+        @options[:on_data].call data
+    end
+
+end
+
 describe Arachni::Reactor::Connection do
     before :all do
         @host, @port = Servers.start( :echo )
@@ -19,8 +48,8 @@ describe Arachni::Reactor::Connection do
     let(:client_socket) { tcp_connect( host, port ) }
     let(:server_socket) { tcp_server( host, port ) }
 
-    let(:connection) { described_class.new }
-    let(:server_handler) { proc { described_class.new } }
+    let(:connection) { Handler.new }
+    let(:server_handler) { proc { Handler.new } }
 
     it_should_behave_like 'Arachni::Reactor::Connection'
 end
