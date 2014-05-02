@@ -50,6 +50,10 @@ shared_examples_for 'Arachni::Reactor' do
         describe :max_tick_interval do
             it 'sets the maximum amount of time for each loop interval'
         end
+
+        describe :select_timeout do
+            it 'sets the max waiting time for socket activity'
+        end
     end
 
     describe '#create_iterator' do
