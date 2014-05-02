@@ -277,7 +277,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 configured.received_data.size.should == data.size
             end
 
-            it 'passes the data to #on_data' do
+            it 'passes the data to #on_read' do
                 s = peer_server_socket
                 configured
 

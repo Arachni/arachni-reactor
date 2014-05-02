@@ -20,11 +20,11 @@ class Handler < Arachni::Reactor::Connection
         @reactor.stop
     end
 
-    def on_data( data )
+    def on_read( data )
         (@received_data ||= '' ) << data
 
-        return if !@options[:on_data]
-        @options[:on_data].call data
+        return if !@options[:on_read]
+        @options[:on_read].call data
     end
 
 end

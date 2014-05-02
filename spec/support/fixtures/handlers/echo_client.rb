@@ -26,7 +26,7 @@ class EchoClient < Arachni::Reactor::Connection
         @reactor.stop
     end
 
-    def on_data( data )
+    def on_read( data )
         (@received_data ||= '') << data
         @reactor.stop if @received_data.end_with? "\n\n"
     end

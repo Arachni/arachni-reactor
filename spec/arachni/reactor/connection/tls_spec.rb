@@ -20,11 +20,11 @@ class TLSHandler < Arachni::Reactor::Connection
         @reactor.stop
     end
 
-    def on_data( data )
+    def on_read( data )
         (@received_data ||= '' ) << data
 
-        return if !@options[:on_data]
-        @options[:on_data].call data
+        return if !@options[:on_read]
+        @options[:on_read].call data
     end
 
     def on_connect
@@ -100,7 +100,7 @@ describe Arachni::Reactor::Connection::TLS do
                     it 'connects successfully' do
                         received_data = nil
                         options = server_ssl_options.merge(
-                            on_data: proc do |received|
+                            on_read: proc do |received|
                                 received_data = received
                             end
                         )
@@ -152,7 +152,7 @@ describe Arachni::Reactor::Connection::TLS do
                         it 'connects successfully' do
                             received_data = nil
                             options = server_ssl_options.merge(
-                                on_data: proc do |received|
+                                on_read: proc do |received|
                                     received_data = received
                                 end
                             )

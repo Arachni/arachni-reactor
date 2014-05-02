@@ -150,7 +150,7 @@ class Connection
     #   Incoming data.
     #
     # @abstract
-    def on_data( data )
+    def on_read( data )
     end
 
     # Called after each {#write} call.
@@ -254,7 +254,7 @@ class Connection
 
     # @note If this is a server listener it will delegate to {#accept}.
     # @note If this is a normal socket it will read {BLOCK_SIZE} amount of data.
-    #   and pass it to {#on_data}.
+    #   and pass it to {#on_read}.
     #
     # Processes a `read` event for this connection.
     #
@@ -263,7 +263,7 @@ class Connection
         return accept if @role == :server && @server_handler
 
         Error.translate do
-            on_data @socket.read_nonblock( BLOCK_SIZE )
+            on_read @socket.read_nonblock( BLOCK_SIZE )
         end
 
     # Not ready to read or write yet, we'll catch it on future Reactor ticks.

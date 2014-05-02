@@ -5,7 +5,7 @@ class EchoServer < Arachni::Reactor::Connection
         @initialization_args = args
     end
 
-    def on_data( data )
+    def on_read( data )
         send_data data
     end
 
