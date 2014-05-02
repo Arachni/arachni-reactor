@@ -19,6 +19,7 @@ module Arachni
 #       that's probably what you want.
 #       * Rest of the class methods can be used to manage it.
 #   * Creating resources like:
+#       * Cross-thread, non-blocking {#create_queue Queue}.
 #       * Network connections to:
 #           * {#connect Connect} to a server.
 #           * {#listen Listen} for clients.
