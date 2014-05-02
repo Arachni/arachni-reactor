@@ -257,20 +257,15 @@ class Reactor
         schedule { @stop = true }
     end
 
-    # @note Will {#schedule} the `block` and return if already {#running?}.
-    # @note If already {#running?} and a `block` is given it will be forwarded
-    #   to {#next_tick}.
-    #
     # Starts the {Reactor} loop and blocks the current {#thread} until {#stop}
     # is called.
     #
     # @param    [Block] block
     #   Block to call right before initializing the loop.
+    #
+    # @raise    (see #fail_if_running)
     def run( &block )
-        if running?
-            schedule( &block ) if block_given?
-            return
-        end
+        fail_if_running
 
         @done_signal.clear
 
@@ -298,7 +293,7 @@ class Reactor
         @done_signal << nil
     end
 
-    # {#run Runs} the Reactor in a thread and blocks until it is ready.
+    # {#run Runs} the Reactor in a thread and blocks until it is {#running?}.
     #
     # @param    (see #run)
     #

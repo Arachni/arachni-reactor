@@ -410,8 +410,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         context 'when the connection has been closed' do
             it 'returns true' do
-                reactor.run_in_thread
-                configured.close
+                reactor.run do
+                    configured.close
+                end
+
                 configured.should be_closed
             end
         end
