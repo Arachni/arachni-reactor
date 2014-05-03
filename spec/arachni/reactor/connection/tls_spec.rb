@@ -135,7 +135,14 @@ describe Arachni::Reactor::Connection::TLS do
 
                         reactor.listen( host, port, TLSHandler, options )
 
-                        expect { client }.to raise_error OpenSSL::SSL::SSLError
+                        client_error = nil
+                        begin
+                            client
+                        rescue => e
+                            client_error = e
+                        end
+
+                        [OpenSSL::SSL::SSLError, Errno::ECONNRESET].should include client_error.class
 
                         reactor.wait rescue Arachni::Reactor::Error::NotRunning
 
@@ -185,7 +192,14 @@ describe Arachni::Reactor::Connection::TLS do
                             reactor.run_in_thread
                             reactor.listen( host, port, TLSHandler, options )
 
-                            expect { client }.to raise_error OpenSSL::SSL::SSLError
+                            client_error = nil
+                            begin
+                                client
+                            rescue => e
+                                client_error = e
+                            end
+
+                            [OpenSSL::SSL::SSLError, Errno::ECONNRESET].should include client_error.class
 
                             reactor.wait rescue Arachni::Reactor::Error::NotRunning
 
