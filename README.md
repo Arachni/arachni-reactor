@@ -41,7 +41,12 @@ on network connections -- and less so on generic tasks.
 
  - Extremely lightweight.
  - Very simple design.
- - Pure-Ruby -- and thus portable.
+ - TLS encryption.
+ - Pure-Ruby.
+ - Multi-platform, tested on:
+    - Linux
+    - OSX
+    - Windows
 
 ## Installation
 
@@ -51,7 +56,7 @@ on network connections -- and less so on generic tasks.
 
 ## Bug reports/Feature requests
 
-Please send your feedback using Github's issue system at
+Please send your feedback using GitHub's issue system at
 [http://github.com/arachni/arachni-reactor/issues](http://github.com/arachni/arachni-reactor/issues).
 
 
