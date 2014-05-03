@@ -327,7 +327,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
-    describe '#read' do
+    describe '#_read' do
         context 'when the connection is a socket' do
             let(:connection) { echo_client_handler }
             let(:role) { :client }
