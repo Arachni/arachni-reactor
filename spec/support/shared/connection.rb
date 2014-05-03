@@ -408,7 +408,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         let(:role) { :client }
         let(:socket) { echo_client }
 
-        it "consumes the send-buffer a maximum of #{Arachni::Reactor::Connection::BLOCK_SIZE} bytes at a time" do
+        it "consumes the write-buffer a maximum of #{Arachni::Reactor::Connection::BLOCK_SIZE} bytes at a time" do
             configured.write data
             sleep 0.1 while !configured.has_outgoing_data?
 
