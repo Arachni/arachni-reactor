@@ -54,6 +54,13 @@ class Reactor
         class AlreadyRunning < Error
         end
 
+        # Raised when trying to use UNIX-domain sockets on a host OS that
+        # does not support them.
+        #
+        # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
+        class UNIXSocketsNotSupported < Error
+        end
+
     end
 
     %w(connection tasks queue iterator global).each do |f|
@@ -98,6 +105,12 @@ class Reactor
             global.class.instance_variable_set(:@singleton__instance__, nil)
 
             @reactor = nil
+        end
+
+        def supports_unix_sockets?
+            !!UNIXSocket
+        rescue NameError
+            false
         end
 
     end
@@ -166,6 +179,7 @@ class Reactor
     #   Connected instance of `handler`.
     #
     # @raise    (see #fail_if_not_running)
+    # @raise    (see #fail_if_non_unix)
     def connect( *args, &block )
         fail_if_not_running
 
@@ -224,6 +238,7 @@ class Reactor
     #   Listening instance of `handler`.
     #
     # @raise    (see #fail_if_not_running)
+    # @raise    (see #fail_if_non_unix)
     def listen( *args, &block )
         fail_if_not_running
 
@@ -494,6 +509,16 @@ class Reactor
         fail Error::AlreadyRunning, 'Reactor is already running.' if running?
     end
 
+    # @raise    [Error::UNIXSocketsNotSupported]
+    #   If trying to use UNIX-domain sockets on a host OS that does not
+    #   support them.
+    def fail_if_non_unix
+        return if self.class.supports_unix_sockets?
+
+        fail Error::UNIXSocketsNotSupported,
+             'The host OS does not support UNIX-domain sockets.'
+    end
+
     def process_connections
         if @connections.empty?
             sleep @max_tick_interval
@@ -534,6 +559,8 @@ class Reactor
     # @return   [UNIXSocket]
     #   Connected socket.
     def connect_unix( unix_socket )
+        fail_if_non_unix
+
         UNIXSocket.new( unix_socket )
     end
 
@@ -579,7 +606,8 @@ class Reactor
         return if !@server
 
         path = nil
-        if @server.socket && (io = @server.socket.to_io).is_a?( UNIXSocket )
+        if self.class.supports_unix_sockets? && @server.socket &&
+            (io = @server.socket.to_io).is_a?( UNIXSocket )
             path = io.path
         end
 

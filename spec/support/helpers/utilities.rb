@@ -23,18 +23,22 @@ def tcp_write( host, port, data )
     s
 end
 
-def unix_connect( socket )
-    UNIXSocket.new( socket )
+if Arachni::Reactor.supports_unix_sockets?
+
+    def unix_connect( socket )
+        UNIXSocket.new( socket )
+    end
+
+    def unix_server( socket )
+        UNIXServer.new( socket )
+    end
+
 end
 
 def unix_write( socket, data )
     s = unix_connect( socket )
     s.write data
     s
-end
-
-def unix_server( socket )
-    UNIXServer.new( socket )
 end
 
 def tcp_server( host, port )

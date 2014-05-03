@@ -86,7 +86,9 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             end
         end
 
-        context 'when using UNIX-domain socket' do
+        context 'when using UNIX-domain socket',
+                if: Arachni::Reactor.supports_unix_sockets? do
+
             let(:connection) { echo_client_handler }
             let(:role) { :client }
             let(:socket) { unix_socket }
@@ -119,7 +121,6 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             IO.select( nil, [configured.socket] )
 
             configured.peer_hostname.should == s.to_io.addr(true)[2]
-            configured.peer_hostname.should == 'localhost'
         end
     end
 
@@ -139,7 +140,6 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             IO.select( nil, [configured.socket] )
 
             configured.peer_ip_address.should == s.to_io.addr[3]
-            configured.peer_ip_address.should == '127.0.0.1'
         end
     end
 
@@ -284,8 +284,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             sleep 0.1 while !configured.has_outgoing_data?
 
             while configured.has_outgoing_data?
-                IO.select( nil, [configured.socket] )
+
+                IO.select( nil, [configured.socket], nil )
                 next if configured._write != 0
+
                 IO.select( [configured.socket] )
             end
 

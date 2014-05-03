@@ -65,14 +65,18 @@ class Connection
     #               path:     '/tmp/my-socket'
     #           }
     def peer_address_info( resolve = false )
-        if @socket.to_io.is_a? UNIXSocket
+        if Arachni::Reactor.supports_unix_sockets? &&
+            @socket.to_io.is_a?( UNIXSocket )
+
             protocol, _ = @socket.to_io.peeraddr
             {
                 protocol: protocol,
                 path:     @socket.to_io.path
             }
         else
-            protocol, port, hostname, ip_address = @socket.to_io.peeraddr( resolve )
+            protocol, port, hostname, ip_address =
+                @socket.to_io.peeraddr( resolve )
+
             {
                 protocol:   protocol,
                 port:       port,

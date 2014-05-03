@@ -501,7 +501,9 @@ shared_examples_for 'Arachni::Reactor' do
     end
 
     describe '#connect' do
-        context 'when using UNIX domain sockets' do
+        context 'when using UNIX domain sockets',
+                if: Arachni::Reactor.supports_unix_sockets? do
+
             it "returns #{klass::Connection}" do
                 subject.run_block do
                     subject.connect( @unix_socket, echo_client_handler ).should be_kind_of klass::Connection
@@ -638,7 +640,9 @@ shared_examples_for 'Arachni::Reactor' do
         let(:port) { Servers.available_port }
         let(:unix_socket) { port_to_socket Servers.available_port }
 
-        context 'when using UNIX domain sockets' do
+        context 'when using UNIX domain sockets',
+                if: Arachni::Reactor.supports_unix_sockets? do
+
             it "returns #{klass::Connection}" do
                 subject.run_block do
                     subject.listen( unix_socket, echo_server_handler ).should be_kind_of klass::Connection
