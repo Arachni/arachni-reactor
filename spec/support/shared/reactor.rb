@@ -617,7 +617,8 @@ shared_examples_for 'Arachni::Reactor' do
                         end
                     end
 
-                    [:error, klass::Connection::Error::Refused].should include Thread.current[:outside_thread][:error]
+                    [:error, klass::Connection::Error::Closed,
+                     klass::Connection::Error::Refused].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
@@ -732,7 +733,7 @@ shared_examples_for 'Arachni::Reactor' do
                 end
             end
 
-            context 'when the port is invalid' do
+            context 'when the port is invalid', if: !Gem.win_platform? do
                 it 'calls #on_close' do
                     outside_thread = Thread.current
                     subject.run do
