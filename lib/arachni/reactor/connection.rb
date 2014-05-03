@@ -167,15 +167,64 @@ class Connection
     def on_flush
     end
 
+    # @return   [Bool]
+    #   `true` if the connection is {Reactor#attached?} to a {#reactor},
+    #   `false` otherwise.
+    def attached?
+        @reactor && @reactor.attached?( self )
+    end
+
+    # @return   [Bool]
+    #   `true` if the connection is not {Reactor#attached?} to a {#reactor},
+    #   `false` otherwise.
+    def detached?
+        !attached?
+    end
+
+    # @note Will first detach if already {#attached?}.
+    # @note Sets {#reactor}.
+    # @note Calls {#on_attach}.
+    #
+    # @param    [Reactor]   reactor
+    #   {Reactor} to which to attach {Reactor#attach}.
+    #
+    # @return   [Bool]
+    #   `true` if the connection was attached, `nil` if the connection was
+    #   already attached.
+    def attach( reactor )
+        return if reactor.attached?( self )
+        detach if attached?
+
+        reactor.attach self
+
+        true
+    end
+
+    # @note Removes {#reactor}.
+    # @note Calls {#on_detach}.
+    #
+    # {Reactor#detach Detaches} `self` from the {#reactor}.
+    #
+    # @return   [Bool]
+    #   `true` if the connection was detached, `nil` if the connection was
+    #   already detached.
+    def detach
+        return if detached?
+
+        @reactor.detach self
+
+        true
+    end
+
     # @note Will not call {#on_close}.
     #
-    # Closes the connection and {Reactor#detach detaches} it from the {Reactor}.
+    # Closes the connection and {#detach detaches} it from the {Reactor}.
     def close_without_callback
         return if closed?
         @closed = true
 
         @socket.close if @socket
-        @reactor.detach self
+        detach
 
         nil
     end

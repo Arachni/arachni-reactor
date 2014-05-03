@@ -440,30 +440,44 @@ class Reactor
         Thread.current == thread
     end
 
-    # Attaches a connection to the {Reactor} loop.
+    # @note Will call {Connection#on_attach}.
+    #
+    # {Connection#attach Attaches} a connection to the {Reactor} loop.
     #
     # @param    [Connection]    connection
     #
     # @raise    (see #fail_if_not_running)
     def attach( connection )
-        schedule do
-            @connections[connection.socket] = connection
+        return if attached? connection
 
+        schedule do
             connection.reactor = self
+            @connections[connection.socket] = connection
             connection.on_attach
         end
     end
 
-    # Detaches a connection from the {Reactor} loop.
+    # @note Will call {Connection#on_detach}.
+    #
+    # {Connection#detach Detaches} a connection from the {Reactor} loop.
     #
     # @param    [Connection]    connection
     #
     # @raise    (see #fail_if_not_running)
     def detach( connection )
+        return if !attached?( connection )
+
         schedule do
             connection.on_detach
             @connections.delete connection.socket
+            connection.reactor = nil
         end
+    end
+
+    # @return   [Bool]
+    #   `true` if the connection is attached, `false` otherwise.
+    def attached?( connection )
+        @connections.include? connection.socket
     end
 
     private

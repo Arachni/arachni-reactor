@@ -162,37 +162,104 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
-    describe '#on_attach' do
+    describe '#attach' do
         let(:socket) { client_socket }
         let(:role) { :client }
 
-        it 'is called when the connection gets attached to a Reactor' do
+        it 'attaches the connection to a Reactor' do
+            peer_server_socket
+            configured
+
+            reactor.run_in_thread
+
+            connection.attach( reactor ).should be_true
+            sleep 1
+
+            reactor.attached?( configured ).should be_true
+        end
+
+        it 'calls #on_attach' do
             peer_server_socket
             configured
 
             reactor.run_in_thread
 
             configured.should receive(:on_attach)
-            reactor.attach connection
+            connection.attach reactor
 
             sleep 1
         end
+
+        context 'when the connection is already attached' do
+            context 'to the same Reactor' do
+                it 'does nothing' do
+                    peer_server_socket
+                    configured
+
+                    reactor.run_in_thread
+
+                    connection.attach reactor
+                    sleep 0.1 while connection.detached?
+
+                    connection.attach( reactor ).should be_false
+                end
+            end
+
+            context 'to a different Reactor' do
+                it 'detaches it first' do
+                    peer_server_socket
+                    configured
+
+                    reactor.run_in_thread
+
+                    connection.attach reactor
+                    sleep 0.1 while connection.detached?
+
+                    r = Arachni::Reactor.new
+                    r.run_in_thread
+
+                    configured.should receive(:on_detach)
+                    connection.attach( r ).should be_true
+                    sleep 1
+
+                    r.attached?( configured ).should be_true
+                end
+            end
+        end
     end
 
-    describe '#on_detach' do
+    describe '#detach' do
         let(:socket) { client_socket }
         let(:role) { :client }
 
-        it 'is called when the connection gets detached to a Reactor' do
+        it 'detaches the connection from the reactor' do
             peer_server_socket
             configured
 
             reactor.run_in_thread
 
-            configured.should receive(:on_detach)
-            reactor.detach connection
+            connection.attach reactor
+            sleep 0.1 while !connection.attached?
 
-            sleep 1
+            connection.detach
+            sleep 0.1 while connection.attached?
+
+            reactor.attached?( configured ).should be_false
+        end
+
+        it 'calls #on_detach' do
+            peer_server_socket
+            configured
+
+            reactor.run_in_thread
+
+            connection.attach reactor
+            sleep 0.1 while !connection.attached?
+
+            configured.should receive(:on_detach)
+            connection.detach
+
+            sleep 0.1 while connection.attached?
         end
     end
 
