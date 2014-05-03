@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
 
     s.add_development_dependency 'rake'
     s.add_development_dependency 'rspec'
+    s.add_development_dependency 'awesome_print'
 
     s.description = <<description
     Arachni::Reactor is a simple, lightweight, pure-Ruby implementation of the Reactor
