@@ -210,7 +210,14 @@ describe Arachni::Reactor::Connection::TLS do
 
                         reactor.listen( host, port, TLSHandler, options )
 
-                        expect { client }.to raise_error OpenSSL::SSL::SSLError
+                        client_error = nil
+                        begin
+                            client
+                        rescue => e
+                            client_error = e
+                        end
+
+                        [OpenSSL::SSL::SSLError, Errno::ECONNRESET].should include client_error.class
 
                         reactor.wait rescue Arachni::Reactor::Error::NotRunning
 
@@ -256,7 +263,7 @@ describe Arachni::Reactor::Connection::TLS do
                 let(:server_ssl_options) { server_valid_ssl_options }
 
                 context 'and no options have been provided' do
-                    it "passes #{Arachni::Reactor::Connection::Error::SSL} to #on_error" do
+                    it "passes #{Arachni::Reactor::Connection::Error} to #on_error" do
                         Thread.new do
                             server.accept
                         end
@@ -266,7 +273,7 @@ describe Arachni::Reactor::Connection::TLS do
                             connection = reactor.connect( host, port, TLSHandler )
                         end
 
-                        connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
+                        connection.error.should be_kind_of Arachni::Reactor::Connection::Error
                     end
                 end
 
@@ -290,7 +297,7 @@ describe Arachni::Reactor::Connection::TLS do
                     end
 
                     context 'and are invalid' do
-                        it "passes #{Arachni::Reactor::Connection::Error::SSL} to #on_error" do
+                        it "passes #{Arachni::Reactor::Connection::Error} to #on_error" do
                             Thread.new do
                                 server.accept
                             end
@@ -300,7 +307,7 @@ describe Arachni::Reactor::Connection::TLS do
                                 connection = reactor.connect( host, port, TLSHandler, client_invalid_ssl_options )
                             end
 
-                            connection.error.should be_kind_of Arachni::Reactor::Connection::Error::SSL
+                            connection.error.should be_kind_of Arachni::Reactor::Connection::Error
                         end
                     end
                 end
