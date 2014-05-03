@@ -274,8 +274,13 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             configured
 
+            all_read = false
+            received = ''
+
             t = Thread.new do
                 s = s.accept
+                received << s.read( data.size ) while received.size != data.size
+                all_read = true
             end
 
             configured.write data
@@ -283,17 +288,16 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             # Wait for the reactor to update the buffer.
             sleep 0.1 while !configured.has_outgoing_data?
 
-            while configured.has_outgoing_data?
-
-                IO.select( nil, [configured.socket], nil )
+            while !all_read
+                IO.select( nil, [configured.socket], nil, 1 ) rescue IOError
                 next if configured._write != 0
 
-                IO.select( [configured.socket] )
+                IO.select( [configured.socket], nil, nil, 1 ) rescue IOError
             end
 
             t.join
 
-            s.read(data.size).should == data
+            received.should == data
         end
     end
 
