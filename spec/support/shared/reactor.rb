@@ -618,7 +618,9 @@ shared_examples_for 'Arachni::Reactor' do
                     end
 
                     [:error, klass::Connection::Error::Closed,
-                     klass::Connection::Error::Refused].should include Thread.current[:outside_thread][:error]
+                     klass::Connection::Error::Refused,
+                     Arachni::Reactor::Connection::Error::BrokenPipe
+                    ].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
