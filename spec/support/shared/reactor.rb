@@ -636,7 +636,7 @@ shared_examples_for 'Arachni::Reactor' do
     end
 
     describe '#listen' do
-        let(:host) { 'localhost' }
+        let(:host) { '127.0.0.1' }
         let(:port) { Servers.available_port }
         let(:unix_socket) { port_to_socket Servers.available_port }
 

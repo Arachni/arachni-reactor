@@ -84,7 +84,7 @@ describe Arachni::Reactor::Connection::TLS do
     it_should_behave_like 'Arachni::Reactor::Connection'
 
     context '#start_tls' do
-        let(:host) { 'localhost' }
+        let(:host) { '127.0.0.1' }
         let(:port) { Servers.available_port }
         let(:data) { "stuff\n" }
 

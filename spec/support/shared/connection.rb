@@ -9,7 +9,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         @reactor = nil
     end
 
-    let(:host){ 'localhost' }
+    let(:host){ '127.0.0.1' }
     let(:port){ Servers.available_port }
     let(:reactor) { @reactor = Arachni::Reactor.new }
     let(:block_size) { Arachni::Reactor::Connection::BLOCK_SIZE }
