@@ -199,15 +199,15 @@ class Reactor
                 attach connection
             end
         rescue Connection::Error => e
-            # We cannot attach a connection without a socket but a failed
-            # connection may want to retry or stop the Reactor.
-            connection.reactor = self
             connection.close e
         end
 
         connection
     end
 
+    # @note {Connection::Error Connection errors} will be passed to the `handler`'s
+    #   {Connection#on_close} method as a `reason` argument.
+    #
     # Listens for incoming connections.
     #
     # @overload  listen( host, port, handler = Connection, *handler_options )
@@ -244,22 +244,26 @@ class Reactor
 
         options = determine_connection_options( *args )
 
-        Connection::Error.translate do
-            server_handler = proc do
-                c = options[:handler].new( *options[:handler_options] )
-                c.reactor = self
-                block.call c if block_given?
-                c
+        server_handler = proc do
+            c = options[:handler].new( *options[:handler_options] )
+            c.reactor = self
+            block.call c if block_given?
+            c
+        end
+
+        @server = server_handler.call
+
+        begin
+            Connection::Error.translate do
+                socket = options[:unix_socket] ?
+                    listen_unix( options[:unix_socket] ) :
+                    listen_tcp( options[:host], options[:port] )
+
+                @server.configure socket, :server, server_handler
+                attach @server
             end
-
-            @server = server_handler.call
-
-            socket = options[:unix_socket] ?
-                listen_unix( options[:unix_socket] ) :
-                listen_tcp( options[:host], options[:port] )
-
-            @server.configure socket, :server, server_handler
-            attach @server
+        rescue Connection::Error => e
+            @server.close e
         end
 
         @server

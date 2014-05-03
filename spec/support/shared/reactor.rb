@@ -604,13 +604,20 @@ shared_examples_for 'Arachni::Reactor' do
 
                         subject.connect( @host, @port + 1, echo_client_handler ) do |c|
                             def c.on_close( reason )
-                                Thread.current[:outside_thread][:error] = reason
+                                # Depending on when the error was caught, there
+                                # may not be a reason available.
+                                if reason
+                                    Thread.current[:outside_thread][:error] = reason.class
+                                else
+                                    Thread.current[:outside_thread][:error] = :error
+                                end
+
                                 reactor.stop
                             end
                         end
                     end
 
-                    Thread.current[:outside_thread][:error].should be_a_kind_of klass::Connection::Error::Refused
+                    [:error, klass::Connection::Error::Refused].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
@@ -659,11 +666,27 @@ shared_examples_for 'Arachni::Reactor' do
             end
 
             context 'when the socket is invalid' do
-                it "raises #{klass::Connection::Error::Permission}" do
-                    subject.run_in_thread
-                    expect do
-                        subject.listen( '/socket', echo_server_handler )
-                    end.to raise_error klass::Connection::Error::Permission
+                it 'calls #on_close' do
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
+
+                        subject.listen( '/socket', echo_server_handler ) do |c|
+                            def c.on_close( reason )
+                                # Depending on when the error was caught, there
+                                # may not be a reason available.
+                                if reason
+                                    Thread.current[:outside_thread][:error] = reason.class
+                                else
+                                    Thread.current[:outside_thread][:error] = :error
+                                end
+
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    [:error, klass::Connection::Error::Permission].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
@@ -685,22 +708,52 @@ shared_examples_for 'Arachni::Reactor' do
             end
 
             context 'when the host is invalid' do
-                it "raises #{klass::Connection::Error::HostNotFound}" do
-                    subject.run_in_thread
+                it 'calls #on_close' do
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
 
-                    expect do
-                        subject.listen( 'host', port, echo_server_handler )
-                    end.to raise_error klass::Connection::Error::HostNotFound
+                        subject.listen( 'host', port, echo_server_handler ) do |c|
+                            def c.on_close( reason )
+                                # Depending on when the error was caught, there
+                                # may not be a reason available.
+                                if reason
+                                    Thread.current[:outside_thread][:error] = reason.class
+                                else
+                                    Thread.current[:outside_thread][:error] = :error
+                                end
+
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    [:error, klass::Connection::Error::HostNotFound].should include Thread.current[:outside_thread][:error]
                 end
             end
 
             context 'when the port is invalid' do
-                it "raises #{klass::Connection::Error::Permission}" do
-                    subject.run_in_thread
+                it 'calls #on_close' do
+                    outside_thread = Thread.current
+                    subject.run do
+                        Thread.current[:outside_thread] = outside_thread
 
-                    expect do
-                        subject.listen( host, 1, echo_server_handler )
-                    end.to raise_error klass::Connection::Error::Permission
+                        subject.listen( host, 50, echo_server_handler ) do |c|
+                            def c.on_close( reason )
+                                # Depending on when the error was caught, there
+                                # may not be a reason available.
+                                if reason
+                                    Thread.current[:outside_thread][:error] = reason.class
+                                else
+                                    Thread.current[:outside_thread][:error] = :error
+                                end
+
+                                reactor.stop
+                            end
+                        end
+                    end
+
+                    [:error, klass::Connection::Error::Permission].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
