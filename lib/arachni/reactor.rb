@@ -80,7 +80,7 @@ class Reactor
     attr_reader   :ticks
 
     DEFAULT_OPTIONS = {
-        select_timeout:    1,
+        select_timeout:    0.02,
         max_tick_interval: 0.02
     }
 
@@ -119,8 +119,9 @@ class Reactor
     # @option   options  [Integer,nil]   :max_tick_interval    (0.02)
     #   How long to wait for each tick when no connections are available for
     #   processing.
-    # @option   options  [Integer]   :select_timeout    (1)
-    #   How long to wait for socket activity before continuing to the next tick.
+    # @option   options  [Integer]   :select_timeout    (0.02)
+    #   How long to wait for connection activity before continuing to the next
+    #   tick.
     def initialize( options = {} )
         options = DEFAULT_OPTIONS.merge( options )
 
