@@ -227,7 +227,20 @@ class Connection
         return if closed?
         @closed = true
 
-        @socket.close if @socket
+        if @role == :server && @server_handler
+            path = nil
+            if @reactor.class.supports_unix_sockets? && @socket &&
+                (io = @socket.to_io).is_a?( UNIXSocket )
+                path = io.path
+            end
+
+            File.delete( path ) if path
+        end
+
+        if @socket
+            @socket.close rescue nil
+        end
+
         detach
 
         nil

@@ -252,7 +252,7 @@ class Reactor
             c
         end
 
-        @server = server_handler.call
+        server = server_handler.call
 
         begin
             Connection::Error.translate do
@@ -260,14 +260,14 @@ class Reactor
                     listen_unix( options[:unix_socket] ) :
                     listen_tcp( options[:host], options[:port] )
 
-                @server.configure socket, :server, server_handler
-                attach @server
+                server.configure socket, :server, server_handler
+                attach server
             end
         rescue Connection::Error => e
-            @server.close e
+            server.close e
         end
 
-        @server
+        server
     end
 
     # @return   [Bool]
@@ -310,7 +310,6 @@ class Reactor
         end
 
         @tasks.clear
-        shutdown_server
         close_connections
 
         @shutdown_tasks.call
@@ -604,23 +603,6 @@ class Reactor
     # Closes all client connections, both ingress and egress.
     def close_connections
         @connections.values.each(&:close)
-    end
-
-    # Shuts down the server.
-    def shutdown_server
-        return if !@server
-
-        path = nil
-        if self.class.supports_unix_sockets? && @server.socket &&
-            (io = @server.socket.to_io).is_a?( UNIXSocket )
-            path = io.path
-        end
-
-        @server.close rescue nil
-
-        File.delete( path ) if path
-
-        @server = @server_handler = nil
     end
 
     # @return   [Hash]
