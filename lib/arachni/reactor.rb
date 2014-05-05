@@ -156,7 +156,7 @@ class Reactor
     end
 
     # @note {Connection::Error Connection errors} will be passed to the `handler`'s
-    #   {Connection#on_close} method as a `reason` argument.
+    #   {Connection::Callbacks#on_close} method as a `reason` argument.
     #
     # Connects to a peer.
     #
@@ -207,7 +207,7 @@ class Reactor
     end
 
     # @note {Connection::Error Connection errors} will be passed to the `handler`'s
-    #   {Connection#on_close} method as a `reason` argument.
+    #   {Connection::Callbacks#on_close} method as a `reason` argument.
     #
     # Listens for incoming connections.
     #
@@ -459,7 +459,7 @@ class Reactor
         Thread.current == thread
     end
 
-    # @note Will call {Connection#on_attach}.
+    # @note Will call {Connection::Callbacks#on_attach}.
     #
     # {Connection#attach Attaches} a connection to the {Reactor} loop.
     #
@@ -476,7 +476,7 @@ class Reactor
         end
     end
 
-    # @note Will call {Connection#on_detach}.
+    # @note Will call {Connection::Callbacks#on_detach}.
     #
     # {Connection#detach Detaches} a connection from the {Reactor} loop.
     #
