@@ -40,6 +40,7 @@ describe Arachni::Reactor::Connection do
     end
 
     let(:unix_socket) { unix_connect( @unix_socket ) }
+    let(:unix_server_socket) { unix_server( port_to_socket( Servers.available_port ) ) }
 
     let(:echo_client) { tcp_connect( @host, @port ) }
     let(:echo_client_handler) { EchoClient.new }

@@ -56,6 +56,212 @@ shared_examples_for 'Arachni::Reactor::Connection' do
         end
     end
 
+    describe '#unix?' do
+        context 'when using an IP socket' do
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { client_socket }
+
+            it 'returns false' do
+                s = peer_server_socket
+                configured
+                configured.should_not be_unix
+            end
+        end
+
+        context 'when using UNIX-domain socket',
+                if: Arachni::Reactor.supports_unix_sockets? do
+
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { unix_socket }
+
+            it 'returns true' do
+                s = peer_server_socket
+                configured
+                configured.should be_unix
+            end
+        end
+    end
+
+    describe '#inet?' do
+        context 'when using an IP socket' do
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { client_socket }
+
+            it 'returns false' do
+                s = peer_server_socket
+                configured
+                configured.should be_inet
+            end
+        end
+
+        context 'when using UNIX-domain socket',
+                if: Arachni::Reactor.supports_unix_sockets? do
+
+            let(:connection) { echo_client_handler }
+            let(:role) { :client }
+            let(:socket) { unix_socket }
+
+            it 'returns false' do
+                s = peer_server_socket
+                configured
+                configured.should_not be_inet
+            end
+        end
+    end
+
+    describe '#to_io' do
+        context 'when the connection is a server listener' do
+            let(:role) { :server }
+
+            context 'when using an IP socket' do
+                let(:socket) { server_socket }
+
+                it 'returns TCPServer' do
+                    reactor.run_in_thread
+                    configured
+
+                    configured.to_io.should be_kind_of TCPServer
+                end
+            end
+
+            context 'when using UNIX-domain socket',
+                    if: Arachni::Reactor.supports_unix_sockets? do
+
+                let(:connection) { echo_client_handler }
+                let(:role) { :client }
+                let(:socket) { unix_server_socket }
+
+                it 'returns UNIXServer' do
+                    peer_server_socket
+                    configured.to_io.should be_instance_of UNIXServer
+                end
+            end
+        end
+
+        context 'when the connection is a server handler' do
+            let(:role) { :server }
+
+            context 'when using an IP socket' do
+                let(:socket) { server_socket }
+
+                it 'returns TCPSocket' do
+                    reactor.run_in_thread
+                    configured
+
+                    Thread.new do
+                        client = peer_client_socket
+                        client.write( data )
+                    end
+
+                    IO.select [configured.socket]
+                    configured.accept.to_io.should be_kind_of TCPSocket
+                end
+            end
+        end
+
+        context 'when the connection is a client' do
+            context 'when using an IP socket' do
+                let(:role) { :client }
+                let(:socket) { client_socket }
+
+                it 'returns TCPSocket' do
+                    peer_server_socket
+                    configured.to_io.should be_instance_of TCPSocket
+                end
+            end
+
+            context 'when using UNIX-domain socket',
+                    if: Arachni::Reactor.supports_unix_sockets? do
+
+                let(:role) { :client }
+                let(:socket) { unix_socket }
+
+                it 'returns UNIXSocket' do
+                    peer_server_socket
+                    configured.to_io.should be_instance_of UNIXSocket
+                end
+            end
+        end
+    end
+
+    describe '#listener?' do
+        context 'when the connection is a server listener' do
+            let(:role) { :server }
+
+            context 'when using an IP socket' do
+                let(:socket) { server_socket }
+
+                it 'returns true' do
+                    reactor.run_in_thread
+                    configured
+
+                    configured.should be_listener
+                end
+            end
+
+            context 'when using UNIX-domain socket',
+                    if: Arachni::Reactor.supports_unix_sockets? do
+
+                let(:connection) { echo_client_handler }
+                let(:role) { :client }
+                let(:socket) { unix_server_socket }
+
+                it 'returns true' do
+                    peer_server_socket
+                    configured.should be_listener
+                end
+            end
+        end
+
+        context 'when the connection is a server handler' do
+            let(:role) { :server }
+
+            context 'when using an IP socket' do
+                let(:socket) { server_socket }
+
+                it 'returns false' do
+                    reactor.run_in_thread
+                    configured
+
+                    Thread.new do
+                        client = peer_client_socket
+                        client.write( data )
+                    end
+
+                    IO.select [configured.socket]
+                    configured.accept.should_not be_listener
+                end
+            end
+        end
+
+        context 'when the connection is a client' do
+            context 'when using an IP socket' do
+                let(:role) { :client }
+                let(:socket) { client_socket }
+
+                it 'returns false' do
+                    peer_server_socket
+                    configured.should_not be_listener
+                end
+            end
+
+            context 'when using UNIX-domain socket',
+                    if: Arachni::Reactor.supports_unix_sockets? do
+
+                let(:role) { :client }
+                let(:socket) { unix_socket }
+
+                it 'returns false' do
+                    peer_server_socket
+                    configured.should_not be_listener
+                end
+            end
+        end
+    end
+
     describe '#peer_address_info' do
         context 'when using an IP socket' do
             let(:connection) { echo_client_handler }

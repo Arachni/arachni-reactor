@@ -65,17 +65,13 @@ class Connection
     #               path:     '/tmp/my-socket'
     #           }
     def peer_address_info( resolve = false )
-        if Arachni::Reactor.supports_unix_sockets? &&
-            @socket.to_io.is_a?( UNIXSocket )
-
-            protocol, _ = @socket.to_io.peeraddr
+        if Arachni::Reactor.supports_unix_sockets? && to_io.is_a?( UNIXSocket )
             {
-                protocol: protocol,
-                path:     @socket.to_io.path
+                protocol: to_io.peeraddr.first,
+                path:     to_io.path
             }
         else
-            protocol, port, hostname, ip_address =
-                @socket.to_io.peeraddr( resolve )
+            protocol, port, hostname, ip_address = to_io.peeraddr( resolve )
 
             {
                 protocol:   protocol,
@@ -84,6 +80,23 @@ class Connection
                 ip_address: ip_address
             }
         end
+    end
+
+    # @return   [Bool, nil]
+    #   `true` when using a UNIX-domain socket, `nil` if no {#socket} is
+    #   available, `false` otherwise.
+    def unix?
+        return if !to_io
+        return false if !Arachni::Reactor.supports_unix_sockets?
+        to_io.is_a?( UNIXServer ) || to_io.is_a?( UNIXSocket )
+    end
+
+    # @return   [Bool]
+    #   `true` when using an Internet socket, `nil` if no {#socket} is
+    #   available, `false` otherwise.
+    def inet?
+        return if !to_io
+        to_io.is_a?( TCPServer ) || to_io.is_a?( TCPSocket ) || to_io.is_a?( Socket )
     end
 
     # @return   [String]
@@ -108,6 +121,20 @@ class Connection
     #   Peer's port.
     def peer_port
         peer_address_info[:port]
+    end
+
+    # @return   [IO, nil]
+    #   IO stream or `nil` if no {#socket} is available.
+    def to_io
+        return if !@socket
+        @socket.to_io
+    end
+
+    # @return   [Bool]
+    #   `true` if the connection is a server listener.
+    def listener?
+        return if !to_io
+        to_io.is_a?( TCPServer ) || (unix? && to_io.is_a?( UNIXServer ))
     end
 
     # @note The data will be buffered and sent in future {Reactor} ticks.
@@ -227,14 +254,8 @@ class Connection
         return if closed?
         @closed = true
 
-        if @role == :server && @server_handler
-            path = nil
-            if @reactor.class.supports_unix_sockets? && @socket &&
-                (io = @socket.to_io).is_a?( UNIXSocket )
-                path = io.path
-            end
-
-            File.delete( path ) if path
+        if listener? && unix? && (path = to_io.path) && File.exist?( path )
+            File.delete( path )
         end
 
         if @socket
@@ -320,7 +341,7 @@ class Connection
         close e
     end
 
-    # @note If this is a server listener it will delegate to {#accept}.
+    # @note If this is a server {#listener?} it will delegate to {#accept}.
     # @note If this is a normal socket it will read {BLOCK_SIZE} amount of data.
     #   and pass it to {#on_read}.
     #
@@ -328,7 +349,7 @@ class Connection
     #
     # @private
     def _read
-        return accept if @role == :server && @server_handler
+        return accept if listener?
 
         Error.translate do
             on_read @socket.read_nonblock( BLOCK_SIZE )
@@ -348,7 +369,7 @@ class Connection
     #
     # @private
     def accept
-        return if !accepted = socket_accept
+        return if !(accepted = socket_accept)
 
         connection = @server_handler.call
         connection.configure accepted, :server

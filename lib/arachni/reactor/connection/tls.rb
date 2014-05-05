@@ -81,7 +81,7 @@ module TLS
     def socket_accept
         socket = nil
         begin
-            socket = @socket.to_io.accept_nonblock
+            socket = to_io.accept_nonblock
         rescue IO::WaitReadable, IO::WaitWritable
             return
         end
