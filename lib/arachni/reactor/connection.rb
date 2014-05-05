@@ -7,6 +7,8 @@
 =end
 
 require_relative 'connection/error'
+require_relative 'connection/peer_info'
+require_relative 'connection/callbacks'
 require_relative 'connection/tls'
 
 module Arachni
@@ -14,6 +16,8 @@ class Reactor
 
 # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
 class Connection
+    include PeerInfo
+    include Callbacks
 
     # Maximum amount of data to be written or read at a time.
     #
@@ -34,54 +38,6 @@ class Connection
     #   `:client` or `:server`
     attr_reader   :role
 
-    # @param    [Bool]  resolve
-    #   Resolve IP address to hostname.
-    # @return   [Hash]
-    #   Peer address information:
-    #
-    #   * IP socket:
-    #       * Without `resolve`:
-    #
-    #               {
-    #                   protocol:   'AF_INET',
-    #                   port:       10314,
-    #                   hostname:   '127.0.0.1',
-    #                   ip_address: '127.0.0.1'
-    #               }
-    #
-    #       * With `resolve`:
-    #
-    #               {
-    #                   protocol:   'AF_INET',
-    #                   port:       10314,
-    #                   hostname:   'localhost',
-    #                   ip_address: '127.0.0.1'
-    #               }
-    #
-    #   * UNIX-domain socket:
-    #
-    #           {
-    #               protocol: 'AF_UNIX',
-    #               path:     '/tmp/my-socket'
-    #           }
-    def peer_address_info( resolve = false )
-        if Arachni::Reactor.supports_unix_sockets? && to_io.is_a?( UNIXSocket )
-            {
-                protocol: to_io.peeraddr.first,
-                path:     to_io.path
-            }
-        else
-            protocol, port, hostname, ip_address = to_io.peeraddr( resolve )
-
-            {
-                protocol:   protocol,
-                port:       port,
-                hostname:   hostname,
-                ip_address: ip_address
-            }
-        end
-    end
-
     # @return   [Bool, nil]
     #   `true` when using a UNIX-domain socket, `nil` if no {#socket} is
     #   available, `false` otherwise.
@@ -97,30 +53,6 @@ class Connection
     def inet?
         return if !to_io
         to_io.is_a?( TCPServer ) || to_io.is_a?( TCPSocket ) || to_io.is_a?( Socket )
-    end
-
-    # @return   [String]
-    #   Peer's IP address or socket path.
-    def peer_address
-        peer_ip_address || peer_address_info[:path]
-    end
-
-    # @return   [String]
-    #   Peer's IP address.
-    def peer_ip_address
-        peer_address_info[:ip_address]
-    end
-
-    # @return   [String]
-    #   Peer's hostname.
-    def peer_hostname
-        peer_address_info(true)[:hostname]
-    end
-
-    # @return   [String]
-    #   Peer's port.
-    def peer_port
-        peer_address_info[:port]
     end
 
     # @return   [IO, nil]
@@ -145,57 +77,6 @@ class Connection
         @reactor.schedule do
             write_buffer << data
         end
-    end
-
-    # Called after the connection has been established.
-    #
-    # @abstract
-    def on_connect
-    end
-
-    # Called after the connection has been attached to a {#reactor}.
-    #
-    # @abstract
-    def on_attach
-    end
-
-    # Called right the connection is detached from the {#reactor}.
-    #
-    # @abstract
-    def on_detach
-    end
-
-    # @note If a connection could not be established no {#socket} may be
-    #   available.
-    #
-    # Called when the connection gets closed.
-    #
-    # @param    [Exception] reason
-    #   Reason for the close.
-    #
-    # @abstract
-    def on_close( reason )
-    end
-
-    # Called when data are available.
-    #
-    # @param    [String] data
-    #   Incoming data.
-    #
-    # @abstract
-    def on_read( data )
-    end
-
-    # Called after each {#write} call.
-    #
-    # @abstract
-    def on_write
-    end
-
-    # Called after the {#write buffered data} have all been sent to the peer.
-    #
-    # @abstract
-    def on_flush
     end
 
     # @return   [Bool]
