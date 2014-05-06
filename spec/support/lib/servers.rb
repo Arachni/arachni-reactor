@@ -59,7 +59,7 @@ class Servers
 
         begin
             socket.connect( sockaddr )
-        rescue Errno::ECONNREFUSED
+        rescue Errno::ECONNREFUSED, Errno::EADDRINUSE
             return false
         end
 
