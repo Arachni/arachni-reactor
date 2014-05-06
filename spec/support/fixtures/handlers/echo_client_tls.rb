@@ -1,3 +1,5 @@
+require_relative 'echo_client'
+
 class EchoClientTLS < EchoClient
     include TLS
 
