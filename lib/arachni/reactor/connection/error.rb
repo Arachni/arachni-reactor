@@ -30,7 +30,10 @@ class Error < Arachni::Reactor::Error
             raise_with_proper_backtrace( e, HostNotFound )
         rescue Errno::EPIPE => e
             raise_with_proper_backtrace( e, BrokenPipe )
-        rescue Errno::ECONNREFUSED => e
+        rescue Errno::ECONNREFUSED,
+            # JRuby throws Errno::EADDRINUSE when trying to connect to a
+            # non-existent server.
+            Errno::EADDRINUSE => e
             raise_with_proper_backtrace( e, Refused )
         rescue Errno::ECONNRESET => e
             raise_with_proper_backtrace( e, Reset )

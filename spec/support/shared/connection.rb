@@ -429,7 +429,8 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
                     configured.should receive(:on_detach)
                     connection.attach( r ).should be_true
-                    sleep 1
+
+                    sleep 2
 
                     r.attached?( configured ).should be_true
                 end

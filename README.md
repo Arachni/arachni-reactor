@@ -50,6 +50,7 @@ on network connections -- and less so on generic tasks.
  - Rubies:
     - MRI >= 1.9
     - Rubinius
+    - JRuby (Without OpenSSL support)
  - Operating Systems:
     - Linux
     - OSX

@@ -108,13 +108,16 @@ class Reactor
         end
 
         def supports_unix_sockets?
-            return false if RUBY_PLATFORM == 'java'
+            return false if jruby?
 
             !!UNIXSocket
         rescue NameError
             false
         end
 
+        def jruby?
+            RUBY_PLATFORM == 'java'
+        end
     end
 
     # @param    [Hash]  options
@@ -580,9 +583,16 @@ class Reactor
         )
         socket.do_not_reverse_lookup = true
 
-        begin
-            socket.connect_nonblock( Socket.sockaddr_in( port, host ) )
-        rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+        # JRuby throws java.nio.channels.NotYetConnectedException even after
+        # it returns the socket from Kernel.select, so wait for it to connect
+        # before moving on.
+        if self.class.jruby?
+            socket.connect( Socket.sockaddr_in( port, host ) )
+        else
+            begin
+                socket.connect_nonblock( Socket.sockaddr_in( port, host ) )
+            rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+            end
         end
 
         socket
