@@ -43,7 +43,14 @@ on network connections -- and less so on generic tasks.
  - Very simple design.
  - TLS encryption.
  - Pure-Ruby.
- - Multi-platform, tested on:
+ - Multi-platform.
+
+## Supported platforms
+
+ - Rubies:
+    - MRI >= 1.9
+    - Rubinius
+ - Operating Systems:
     - Linux
     - OSX
     - Windows
