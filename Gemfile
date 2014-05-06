@@ -1,6 +1,8 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
-gem 'yard'
-gem 'redcarpet'
+group :docs do
+    gem 'yard'
+    gem 'redcarpet'
+end
 
 gemspec
