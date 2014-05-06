@@ -1,0 +1,5 @@
+compat.version=2.0
+cext.enabled=false
+errno.backtrace=true
+backtrace.color=true
+backtrace.style=mri
