@@ -580,7 +580,7 @@ class Reactor
 
         begin
             socket.connect_nonblock( Socket.sockaddr_in( port, host ) )
-        rescue IO::WaitReadable, IO::WaitWritable
+        rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
         end
 
         socket

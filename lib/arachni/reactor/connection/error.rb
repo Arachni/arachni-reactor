@@ -41,7 +41,7 @@ class Error < Arachni::Reactor::Error
         # all SSL errors inherit from it, including OpenSSL::SSL::SSLErrorWaitReadable
         # and OpenSSL::SSL::SSLErrorWaitWritable which also inherit from
         # IO::WaitReadable and IO::WaitWritable and need special treatment.
-        rescue IO::WaitReadable, IO::WaitWritable
+        rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
             raise
 
         # We're mainly interested in translating SSL handshake errors but there
