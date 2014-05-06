@@ -108,6 +108,8 @@ class Reactor
         end
 
         def supports_unix_sockets?
+            return false if RUBY_PLATFORM == 'java'
+
             !!UNIXSocket
         rescue NameError
             false
