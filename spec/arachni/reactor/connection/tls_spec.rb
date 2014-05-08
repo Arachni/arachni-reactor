@@ -38,7 +38,7 @@ describe Arachni::Reactor::Connection::TLS do
         @host, @port = Servers.start( :echo_tls )
 
         if Arachni::Reactor.supports_unix_sockets?
-            _, port = Servers.start( :echo_unix )
+            _, port = Servers.start( :echo_unix_tls )
             @unix_socket = port_to_socket( port )
         end
     end
