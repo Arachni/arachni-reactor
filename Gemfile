@@ -1,9 +1,9 @@
 source 'https://rubygems.org'
 
+gem 'rake'
 gem 'awesome_print'
 
 group :spec do
-    gem 'rake'
     gem 'rspec'
 end
 
