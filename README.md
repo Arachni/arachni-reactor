@@ -41,6 +41,7 @@ on network connections -- and less so on generic tasks.
 
  - Extremely lightweight.
  - Very simple design.
+ - Support for TCP/IP and UNIX-domain sockets.
  - TLS encryption.
  - Pure-Ruby.
  - Multi-platform.
