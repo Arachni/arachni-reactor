@@ -59,7 +59,7 @@ on network connections -- and less so on generic tasks.
 
 ## Examples
 
-For examples please see the `examples/ directory.
+For examples please see the `examples/` directory.
 
 ## Installation
 
@@ -75,5 +75,5 @@ Please send your feedback using GitHub's issue system at
 
 ## License
 
-Arachni::Reactor is provided under the 3-clause BSD license.<br/>
-See the [LICENSE](file.LICENSE.html) file for more information.
+Arachni::Reactor is provided under the 3-clause BSD license.
+See the [LICENSE](https://github.com/Arachni/arachni-reactor/blob/master/LICENSE.md) file for more information.
