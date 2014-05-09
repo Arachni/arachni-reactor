@@ -1,4 +1,4 @@
-require 'reactor'
+require 'arachni/reactor'
 
 # Global, shared Reactor.
 reator = Arachni::Reactor.global
