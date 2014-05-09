@@ -15,11 +15,11 @@
     </tr>
     <tr>
        <th>Author</th>
-       <td><a href="mailto:tasos.laskos@gmail.com">Tasos "Zapotek" Laskos</a></td>
+       <td><a href="http://twitter.com/Zap0tek">Tasos Laskos</a></td>
     </tr>
     <tr>
         <th>Twitter</th>
-        <td><a href="http://twitter.com/Zap0tek">@Zap0tek</a></td>
+        <td><a href="http://twitter.com/ArachniScanner">@ArachniScanner</a></td>
     </tr>
     <tr>
         <th>Copyright</th>
