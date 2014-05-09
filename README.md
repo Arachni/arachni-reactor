@@ -63,6 +63,8 @@ For examples please see the `examples/` directory.
 
 ## Installation
 
+    gem install arachni-reactor --pre
+
 ## Running the Specs
 
     rake spec
