@@ -56,6 +56,10 @@ on network connections -- and less so on generic tasks.
     - OSX
     - Windows
 
+## Examples
+
+For examples please see the `examples/ directory.
+
 ## Installation
 
 ## Running the Specs
