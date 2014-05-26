@@ -50,6 +50,8 @@ module TLS
             @ssl_context.cert.public_key = @ssl_context.key
             @ssl_context.cert.not_before = Time.now
             @ssl_context.cert.not_after  = Time.now + 60 * 60 * 24
+            @ssl_context.cert.version    = 2
+            @ssl_context.cert.serial     = 1
 
             @ssl_context.cert.sign( @ssl_context.key, OpenSSL::Digest::SHA1.new )
         end

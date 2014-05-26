@@ -97,6 +97,10 @@ def convert_server_to_ssl( server, options = {} )
         context.cert.public_key = context.key
         context.cert.not_before = Time.now
         context.cert.not_after  = Time.now + 60 * 60 * 24
+        context.cert.version    = 2
+        context.cert.serial     = 1
+
+        context.cert.sign( context.key, OpenSSL::Digest::SHA1.new )
     end
 
     OpenSSL::SSL::SSLServer.new( server, context )
