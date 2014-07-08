@@ -1,6 +1,6 @@
 # ChangeLog
 
-## Version 0.1.0.beta2 _(Under development)_
+## Version 0.1.0.beta2 _(July 8, 2014)_
 
 - Added version and serial number to the default SSL context.
 
