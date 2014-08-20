@@ -100,6 +100,7 @@ module TLS
         end
 
         socket
+    rescue OpenSSL::SSL::SSLError
     end
 
 end
