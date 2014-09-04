@@ -198,6 +198,33 @@ shared_examples_for 'Arachni::Reactor' do
         end
     end
 
+    describe '#on_error' do
+        it 'sets a task to be passed raised exceptions' do
+            run_reactor_in_thread
+
+            e = nil
+            subject.on_error do |_, error|
+                e = error
+            end
+
+            subject.next_tick do
+                raise
+            end
+
+            sleep 0.1 while !e
+
+            e.should be_kind_of RuntimeError
+        end
+
+        context 'when the reactor is not running' do
+            it "raises #{klass::Error::NotRunning}" do
+                expect do
+                    subject.next_tick{}
+                end.to raise_error klass::Error::NotRunning
+            end
+        end
+    end
+
     describe '#on_shutdown' do
         it 'calls the given blocks during shutdown' do
             subject.run_in_thread

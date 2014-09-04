@@ -2,7 +2,9 @@
 
 ## Version 0.1.0.beta4
 
-- `Reactor#running?`: Return `false` if the Reactor thread is dead.
+- `Reactor`
+    - `#running?`: Return `false` if the Reactor thread is dead.
+    - Added `#on_error`, for exception handling callbacks.
 - All tasks can now receive arguments.
 
 ## Version 0.1.0.beta3 _(August 20, 2014)_

@@ -140,6 +140,7 @@ class Reactor
         @thread      = nil
         @tasks       = Tasks.new
 
+        @error_handlers = Tasks.new
         @shutdown_tasks = Tasks.new
         @done_signal    = ::Queue.new
     end
@@ -305,10 +306,18 @@ class Reactor
         block.call if block_given?
 
         loop do
-            @tasks.call
+            begin
+                @tasks.call
+            rescue => e
+                @error_handlers.call( e )
+            end
             break if @stop
 
-            process_connections
+            begin
+                process_connections
+            rescue => e
+                @error_handlers.call( e )
+            end
             break if @stop
 
             @ticks += 1
@@ -337,7 +346,11 @@ class Reactor
         fail_if_running
 
         Thread.new do
-            run(&block)
+            begin
+                run(&block)
+            rescue => e
+                @error_handlers.call( e )
+            end
         end
 
         sleep 0.1 while !running?
@@ -370,6 +383,17 @@ class Reactor
             block.call
             next_tick { stop }
         end
+    end
+
+    # @param    [Block] block
+    #   Passes exceptions raised in the Reactor {#thread} to a
+    #   {Tasks::Persistent task}.
+    #
+    # @raise    (see #fail_if_not_running)
+    def on_error( &block )
+        fail_if_not_running
+        @error_handlers << Tasks::Persistent.new( &block )
+        nil
     end
 
     # @param    [Block] block
