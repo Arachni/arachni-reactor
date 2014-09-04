@@ -1,6 +1,11 @@
 # ChangeLog
 
-## Version 0.1.0.beta4
+## Version 0.1.0.beta5 _(September 4, 2014)_
+
+- `Tasks::OneOff#call`: Ensure that the task is marked as done even if an
+    exception is raised.
+
+## Version 0.1.0.beta4 _(September 4, 2014)_
 
 - `Reactor`
     - `#running?`: Return `false` if the Reactor thread is dead.
