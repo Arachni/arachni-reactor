@@ -483,6 +483,25 @@ shared_examples_for 'Arachni::Reactor' do
                 subject.should_not be_running
             end
         end
+
+        context 'when the reactor thread has been killed' do
+            it 'returns false' do
+                run_reactor_in_thread
+
+                Timeout.timeout 10 do
+                    sleep 0.1 while !subject.running?
+                end
+
+                subject.should be_running
+                subject.thread.kill
+
+                Timeout.timeout 10 do
+                    sleep 0.1 while subject.thread.alive?
+                end
+
+                subject.should_not be_running
+            end
+        end
     end
 
     describe '#stop' do

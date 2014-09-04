@@ -278,7 +278,7 @@ class Reactor
     # @return   [Bool]
     #   `true` if the {Reactor} is {#run running}, `false` otherwise.
     def running?
-        !!thread
+        thread && thread.alive?
     end
 
     # Stops the {Reactor} {#run loop} {#schedule as soon as possible}.
