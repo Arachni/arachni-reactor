@@ -26,10 +26,10 @@ class Base
         @task = task
     end
 
-    # Calls the {#initialize configured} task and passes `self` to it.
+    # Calls the {#initialize configured} task and passes `args` and self` to it.
     #
     # @abstract
-    def call
+    def call( *args )
         fail NotImplementedError
     end
 
@@ -48,8 +48,8 @@ class Base
 
     private
 
-    def call_task
-        @task.call self
+    def call_task( *args )
+        @task.call *([self] + args)
     end
 
 end

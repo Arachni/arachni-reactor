@@ -20,8 +20,8 @@ class Persistent < Base
     #
     # @return   [Object]
     #   Return value of the task.
-    def call
-        call_task
+    def call( *args )
+        call_task( *args )
     end
 
 end

@@ -132,5 +132,24 @@ describe Arachni::Reactor::Tasks do
         it 'returns self' do
             subject.call.should == subject
         end
+
+        context 'when arguments have been provided' do
+            it 'passes them to the tasks' do
+                called_one = nil
+                called_two = nil
+
+                subject << described_class::Persistent.new do |_, arg|
+                    called_one = arg
+                end
+                subject << described_class::Persistent.new do |_, arg|
+                    called_two = arg
+                end
+
+                subject.call( :stuff )
+
+                called_one.should == :stuff
+                called_two.should == :stuff
+            end
+        end
     end
 end

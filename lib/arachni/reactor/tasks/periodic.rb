@@ -36,11 +36,11 @@ class Periodic < Persistent
     # @return   [Object, nil]
     #   Return value of the configured task or `nil` if it's not
     #   {#interval time} yet.
-    def call
+    def call( *args )
         return if !call?
         calculate_next
 
-        super
+        super( *args )
     end
 
     private

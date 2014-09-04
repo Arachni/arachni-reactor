@@ -47,5 +47,20 @@ describe Arachni::Reactor::Tasks::OneOff do
             task.should receive(:done)
             task.call
         end
+
+        context 'when arguments have been provided' do
+            it 'passes them to the task' do
+                got = nil
+                callable = proc do |_, arg|
+                    got = arg
+                end
+
+                task = described_class.new(&callable)
+                list << task
+
+                task.call :stuff
+                got.should == :stuff
+            end
+        end
     end
 end

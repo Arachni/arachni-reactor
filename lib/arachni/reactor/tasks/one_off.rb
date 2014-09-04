@@ -19,8 +19,8 @@ class OneOff < Base
     #
     # @return   [Object]
     #   Return value of the task.
-    def call
-        call_task.tap { done }
+    def call( *args )
+        call_task( *args ).tap { done }
     end
 
 end

@@ -49,6 +49,21 @@ describe Arachni::Reactor::Tasks::Delayed do
                 task.should receive(:done)
                 task.call while called < 1
             end
+
+            context 'when arguments have been provided' do
+                it 'passes them to the task' do
+                    called = nil
+                    task = described_class.new( interval ) do |_, s1, s2|
+                        called = [s1, s2]
+                    end
+
+                    list << task
+
+                    task.call( :stuff1, :stuff2 ) while !called
+
+                    called.should == [:stuff1, :stuff2]
+                end
+            end
         end
     end
 end

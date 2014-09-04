@@ -36,5 +36,20 @@ describe Arachni::Reactor::Tasks::Periodic do
                 (Time.now - time).round(2).should == 1.25
             end
         end
+
+        context 'when arguments have been provided' do
+            it 'passes them to the task' do
+                called = nil
+                task = described_class.new( interval ) do |_, s1, s2|
+                    called = [s1, s2]
+                end
+
+                list << task
+
+                task.call( :stuff1, :stuff2 ) while !called
+
+                called.should == [:stuff1, :stuff2]
+            end
+        end
     end
 end

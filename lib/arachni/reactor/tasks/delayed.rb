@@ -22,10 +22,10 @@ class Delayed < Periodic
     # @return   [Object, nil]
     #   Return value of the configured task or `nil` if it's not
     #   {#interval time} yet.
-    def call
+    def call( *args )
         return if !call?
 
-        call_task.tap { done }
+        call_task( *args ).tap { done }
     end
 
 end

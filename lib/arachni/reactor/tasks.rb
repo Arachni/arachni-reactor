@@ -92,8 +92,8 @@ class Tasks
     # {Base#call Calls} all tasks.
     #
     # @return   [Tasks] `self`
-    def call
-        @tasks.dup.each(&:call)
+    def call( *args )
+        @tasks.dup.each { |t| t.call *args }
         self
     end
 
