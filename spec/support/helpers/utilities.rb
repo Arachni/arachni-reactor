@@ -17,6 +17,16 @@ def tcp_connect( host, port )
     TCPSocket.new( host, port )
 end
 
+def tcp_socket
+    socket = Socket.new(
+        Socket::Constants::AF_INET,
+        Socket::Constants::SOCK_STREAM,
+        Socket::Constants::IPPROTO_IP
+    )
+    socket.do_not_reverse_lookup = true
+    socket
+end
+
 def tcp_write( host, port, data )
     s = tcp_connect( host, port )
     s.write data

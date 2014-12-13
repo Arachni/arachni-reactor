@@ -42,13 +42,13 @@ describe Arachni::Reactor::Connection do
     let(:unix_socket) { unix_connect( @unix_socket ) }
     let(:unix_server_socket) { unix_server( port_to_socket( Servers.available_port ) ) }
 
-    let(:echo_client) { tcp_connect( @host, @port ) }
+    let(:echo_client) { tcp_socket }
     let(:echo_client_handler) { EchoClient.new }
 
     let(:peer_client_socket) { tcp_connect( host, port ) }
     let(:peer_server_socket) { tcp_server( host, port ) }
 
-    let(:client_socket) { tcp_connect( host, port ) }
+    let(:client_socket) { tcp_socket }
     let(:server_socket) { tcp_server( host, port ) }
 
     let(:connection) { Handler.new }

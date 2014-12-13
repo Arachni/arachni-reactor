@@ -61,17 +61,53 @@ module TLS
         else
             @socket = OpenSSL::SSL::SSLSocket.new( @socket, @ssl_context )
             @socket.sync_close = true
-
-            begin
-                @socket.connect_nonblock
-            rescue IO::WaitReadable, IO::WaitWritable
-            end
         end
 
         @socket
     end
 
+    # @private
+    def _connect
+        return if @ssl_connected
+
+        @plaintext_connected ||= super
+        return if !@plaintext_connected
+
+        # Mark the connection as not connected due to the pending SSL handshake.
+        @connected = false
+
+        @socket.connect_nonblock
+        @ssl_connected = @connected = true
+    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS, OpenSSL::SSL::SSLError
+    end
+
+    # @private
+    def _write( *args )
+        return ssl_accept if accept?
+
+        super( *args )
+    end
+
+    # @private
+    def _read
+        return ssl_accept if accept?
+
+        super
+    end
+
     private
+
+    def ssl_accept
+        @accepted = !!@socket.accept_nonblock
+    rescue IO::WaitReadable, IO::WaitWritable, OpenSSL::SSL::SSLError
+    end
+
+    def accept?
+        return false if @accepted
+        return false if role != :server || !@socket.is_a?( OpenSSL::SSL::SSLSocket )
+
+        true
+    end
 
     # Accepts a new SSL client connection.
     #
@@ -81,26 +117,15 @@ module TLS
     #
     # @private
     def socket_accept
-        socket = nil
-        begin
-            socket = to_io.accept_nonblock
-        rescue IO::WaitReadable, IO::WaitWritable
-            return
-        end
+        socket = to_io.accept_nonblock
 
-        socket = OpenSSL::SSL::SSLSocket.new(
+        ssl_socket = OpenSSL::SSL::SSLSocket.new(
             socket,
             @ssl_context
         )
-        socket.sync_close = true
-
-        begin
-            socket.accept_nonblock
-        rescue IO::WaitReadable, IO::WaitWritable
-        end
-
-        socket
-    rescue OpenSSL::SSL::SSLError
+        ssl_socket.sync_close = true
+        ssl_socket
+    rescue IO::WaitReadable, IO::WaitWritable, OpenSSL::SSL::SSLError
     end
 
 end

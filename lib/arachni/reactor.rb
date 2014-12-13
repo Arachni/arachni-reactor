@@ -199,10 +199,9 @@ class Reactor
         begin
             Connection::Error.translate do
                 socket = options[:unix_socket] ?
-                    connect_unix( options[:unix_socket] ) :
-                    connect_tcp( options[:host], options[:port] )
+                    connect_unix( options[:unix_socket] ) : connect_tcp
 
-                connection.configure socket, :client
+                connection.configure options.merge( socket: socket, role: :client )
                 attach connection
             end
         rescue Connection::Error => e
@@ -266,7 +265,7 @@ class Reactor
                     listen_unix( options[:unix_socket] ) :
                     listen_tcp( options[:host], options[:port] )
 
-                server.configure socket, :server, server_handler
+                server.configure options.merge( socket: socket, role: :server, server_handler: server_handler )
                 attach server
             end
         rescue Connection::Error => e
@@ -599,26 +598,13 @@ class Reactor
 
     # @return   [Socket]
     #   Connected socket.
-    def connect_tcp( host, port )
+    def connect_tcp
         socket = Socket.new(
             Socket::Constants::AF_INET,
             Socket::Constants::SOCK_STREAM,
             Socket::Constants::IPPROTO_IP
         )
         socket.do_not_reverse_lookup = true
-
-        # JRuby throws java.nio.channels.NotYetConnectedException even after
-        # it returns the socket from Kernel.select, so wait for it to connect
-        # before moving on.
-        if self.class.jruby?
-            socket.connect( Socket.sockaddr_in( port, host ) )
-        else
-            begin
-                socket.connect_nonblock( Socket.sockaddr_in( port, host ) )
-            rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
-            end
-        end
-
         socket
     end
 
@@ -656,11 +642,12 @@ class Reactor
                     select(
                         read_sockets,
                         write_sockets,
-                        read_sockets, # Read sockets are actually all sockets.
+                        read_sockets, # Read sockets are actually all connected sockets.
                         @select_timeout
                     )
                 end
             rescue Connection::Error
+                nil
             end
 
         return {} if !grouped_sockets
@@ -668,16 +655,19 @@ class Reactor
         {
             # Since these will be processed in order, it's better have the write
             # ones first to flush the buffers ASAP.
-            write: connections_from_sockets( grouped_sockets[1] ),
-            read:  connections_from_sockets( grouped_sockets[0] ),
-            error: connections_from_sockets( grouped_sockets[2] )
+            write:   connections_from_sockets( grouped_sockets[1] ),
+            read:    connections_from_sockets( grouped_sockets[0] ),
+            error:   connections_from_sockets( grouped_sockets[2] )
         }
     end
 
     # @return   [Array<Socket>]
     #   Sockets of all connections, we want to be ready to read at any time.
     def read_sockets
-        @connections.keys
+        @connections.map do |socket, connection|
+            next if !connection.listener? && !connection.connected?
+            socket
+        end.compact
     end
 
     # @return   [Array<Socket>]
@@ -685,7 +675,7 @@ class Reactor
     #   {Connection#has_outgoing_data? outgoing data}.
     def write_sockets
         @connections.map do |socket, connection|
-            next if !connection.has_outgoing_data?
+            next if connection.connected? && !connection.has_outgoing_data?
             socket
         end.compact
     end

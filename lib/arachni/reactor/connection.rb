@@ -190,6 +190,8 @@ class Connection
     #
     # @private
     def _write
+        return _connect if !connected?
+
         chunk = write_buffer.slice( 0, BLOCK_SIZE )
         total_written = 0
 
@@ -253,7 +255,7 @@ class Connection
         return if !(accepted = socket_accept)
 
         connection = @server_handler.call
-        connection.configure accepted, :server
+        connection.configure socket: accepted, role: :server
         @reactor.attach connection
         connection
     end
@@ -266,14 +268,36 @@ class Connection
     #   Block that generates a handler as specified in {Reactor#listen}.
     #
     # @private
-    def configure( socket, role, server_handler = nil )
-        @socket         = socket
-        @role           = role
-        @server_handler = server_handler
+    def configure( options = {} )
+        @socket         = options[:socket]
+        @role           = options[:role]
+        @host           = options[:host]
+        @port           = options[:port]
+        @server_handler = options[:server_handler]
 
-        on_connect
+        # If we're a server without a handler then we're an accepted connection.
+        if unix? || role == :server
+            @connected = true
+            on_connect
+        end
 
         nil
+    end
+
+    def connected?
+        !!@connected
+    end
+
+    def _connect
+        return if connected?
+
+        socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+
+        @connected = true
+        on_connect
+
+        true
+    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
     end
 
     private
