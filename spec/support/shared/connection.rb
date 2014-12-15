@@ -30,6 +30,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     IO.select( [connection.socket], [connection.socket], nil, 0.1 )
                 rescue => e
                     ap e
+                    break
                 end
 
                 connection._connect
