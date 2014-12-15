@@ -557,6 +557,13 @@ class Reactor
             return
         end
 
+        # Required for OSX as it connects immediately and then #select returns
+        # nothing as there's no activity, given that, OpenSSL doesn't get a chance
+        # to do its handshake so explicitly connect pending sockets, bypassing #select.
+        @connections.each do |_, connection|
+            connection._connect if !connection.connected?
+        end
+
         # Get connections with available events - :read, :write, :error.
         selected = select_connections
 
