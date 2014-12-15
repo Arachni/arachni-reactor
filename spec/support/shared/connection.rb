@@ -544,7 +544,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     next
                 end
 
-                written.should == block_size
+                written.should <= block_size
                 writes += 1
             end
 
@@ -575,12 +575,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 while configured.has_outgoing_data?
                     IO.select( nil, [configured.socket] )
 
-                    if (written = configured._write) == 0
+                    if configured._write == 0
                         IO.select( [configured.socket] )
                         next
                     end
-
-                    written.should == block_size
                 end
 
                 configured.called_on_flush.should be_true
