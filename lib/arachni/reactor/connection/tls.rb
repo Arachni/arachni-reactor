@@ -66,8 +66,6 @@ module TLS
             # via the SSL handshake.
             @connected         = false
 
-            # Give this a shot now, JRuby needs this to be here anyways, not
-            # sure why.
             _connect if unix?
         end
 
