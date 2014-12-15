@@ -12,7 +12,7 @@ loop do
     Thread.new do
         begin
             loop do
-                next if (data = socket.readpartial(99999)).to_s.empty?
+                next if (data = socket.gets).to_s.empty?
                 socket.write( data )
             end
         rescue EOFError, Errno::EPIPE
