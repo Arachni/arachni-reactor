@@ -77,7 +77,7 @@ class Servers
         return if !server_info[:pid]
 
         begin
-            Process.kill( 'KILL', server_info[:pid] ) while sleep 0.1
+            Process.kill( Gem.win_platform? ? 'QUIT' : 'KILL', server_info[:pid] ) while sleep 0.1
         rescue Errno::ESRCH
             server_info.delete(:pid)
 
