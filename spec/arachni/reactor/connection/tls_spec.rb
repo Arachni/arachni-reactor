@@ -58,12 +58,10 @@ describe Arachni::Reactor::Connection::TLS do
     let(:peer_server_socket) do
         s = tcp_ssl_server( host, port )
         Thread.new do
-            Thread.new do
-                begin
-                    @accept_q << s.accept
-                rescue => e
-                    ap e
-                end
+            begin
+                @accept_q << s.accept
+            rescue => e
+                ap e
             end
         end
         s
