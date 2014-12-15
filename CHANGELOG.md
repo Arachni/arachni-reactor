@@ -1,5 +1,9 @@
 # ChangeLog
 
+## _Under development_
+
+- Cleaned up connection handling structure for JRuby support.
+
 ## Version 0.1.0.beta5 _(September 4, 2014)_
 
 - `Tasks::OneOff#call`: Ensure that the task is marked as done even if an
