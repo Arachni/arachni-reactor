@@ -222,8 +222,12 @@ class Connection
     def _connect
         return true if unix? || connected?
 
-        Error.translate do
-            socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+        begin
+            Error.translate do
+                socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+            end
+        # Already connected. :)
+        rescue Errno::EISCONN
         end
 
         @connected = true
