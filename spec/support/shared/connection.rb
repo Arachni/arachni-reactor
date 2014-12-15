@@ -26,12 +26,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
         if role == :client
             while !connection.connected?
-                begin
-                    IO.select( [connection.socket], [connection.socket] )
-                rescue
-                    break
-                end
-
+                IO.select( [connection.socket], [connection.socket], nil, 0.1 )
                 connection._connect
             end
         end

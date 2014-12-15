@@ -43,6 +43,11 @@ describe Arachni::Reactor::Connection::TLS do
         end
     end
 
+    before :each do
+        @accept_q = Queue.new
+        @accepted = nil
+    end
+
     let(:unix_socket) { unix_connect( @unix_socket ) }
     let(:unix_server_socket) { unix_server( port_to_socket( Servers.available_port ) ) }
 
@@ -53,11 +58,17 @@ describe Arachni::Reactor::Connection::TLS do
     let(:peer_server_socket) do
         s = tcp_ssl_server( host, port )
         Thread.new do
-            @accepted = s.accept
+            Thread.new do
+                begin
+                    @accept_q << s.accept
+                rescue => e
+                    ap e
+                end
+            end
         end
         s
     end
-    let(:accepted) { @accepted }
+    let(:accepted) { @accepted ||= @accept_q.pop }
 
     let(:client_socket) { tcp_socket }
     let(:server_socket) { tcp_server( host, port ) }
