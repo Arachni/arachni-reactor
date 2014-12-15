@@ -3,6 +3,8 @@
 ## _Under development_
 
 - Cleaned up connection handling structure for JRuby support.
+- `Connection`
+    - Removed `PeerInfo`.
 
 ## Version 0.1.0.beta5 _(September 4, 2014)_
 

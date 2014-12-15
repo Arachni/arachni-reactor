@@ -7,7 +7,6 @@
 =end
 
 require_relative 'connection/error'
-require_relative 'connection/peer_info'
 require_relative 'connection/callbacks'
 require_relative 'connection/tls'
 
@@ -16,7 +15,6 @@ class Reactor
 
 # @author Tasos "Zapotek" Laskos <tasos.laskos@gmail.com>
 class Connection
-    include PeerInfo
     include Callbacks
 
     # Maximum amount of data to be written or read at a time.
