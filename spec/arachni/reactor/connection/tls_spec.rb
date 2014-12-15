@@ -260,7 +260,15 @@ describe Arachni::Reactor::Connection::TLS do
 
         context 'when connecting to a server' do
             let(:server) do
-                tcp_ssl_server( host, port, server_ssl_options )
+                s = tcp_ssl_server( host, port, server_ssl_options )
+                Thread.new do
+                    begin
+                        @accept_q << s.accept
+                    rescue => e
+                        # ap e
+                    end
+                end
+                s
             end
 
             before :each do
@@ -274,9 +282,7 @@ describe Arachni::Reactor::Connection::TLS do
                     it 'connects successfully' do
                         received = nil
                         Thread.new do
-                            s = server.accept
-                            received = s.gets
-
+                            received = accepted.gets
                             reactor.stop
                         end
 
@@ -295,10 +301,6 @@ describe Arachni::Reactor::Connection::TLS do
 
                 context 'and no options have been provided' do
                     it "passes #{Arachni::Reactor::Connection::Error} to #on_error" do
-                        Thread.new do
-                            server.accept
-                        end
-
                         connection = nil
                         reactor.run do
                             connection = reactor.connect( host, port, TLSHandler )
@@ -313,8 +315,7 @@ describe Arachni::Reactor::Connection::TLS do
                         it 'connects successfully' do
                             received = nil
                             t = Thread.new do
-                                s = server.accept
-                                received = s.gets
+                                received = accepted.gets
                                 reactor.stop
                             end
 
@@ -329,10 +330,6 @@ describe Arachni::Reactor::Connection::TLS do
 
                     context 'and are invalid' do
                         it "passes #{Arachni::Reactor::Connection::Error} to #on_error" do
-                            Thread.new do
-                                server.accept
-                            end
-
                             connection = nil
                             reactor.run do
                                 connection = reactor.connect( host, port, TLSHandler, client_invalid_ssl_options )
