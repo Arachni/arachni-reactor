@@ -26,7 +26,7 @@ class Servers
         return [host_for(name), port_for(name)] if server_info[:pid] && up?( name )
 
         server_info[:pid] = Process.spawn(
-            'ruby', RUNNER, server_info[:path], '-p', server_info[:port].to_s,
+            RbConfig.ruby, RUNNER, server_info[:path], '-p', server_info[:port].to_s,
             '-o', host_for( name )
         )
 

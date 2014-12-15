@@ -61,26 +61,44 @@ module TLS
         else
             @socket = OpenSSL::SSL::SSLSocket.new( @socket, @ssl_context )
             @socket.sync_close = true
+
+            # We've switched to SSL, a connection needs to be re-established
+            # via the SSL handshake.
+            @connected         = false
+
+            # Give this a shot now, JRuby needs this to be here anyways, not
+            # sure why.
+            _connect if unix?
         end
 
         @socket
     end
 
+    # Performs an SSL handshake in addition to a plaintext connect operation.
+    #
     # @private
     def _connect
         return if @ssl_connected
 
-        @plaintext_connected ||= super
-        return if !@plaintext_connected
+        Error.translate do
+            @plaintext_connected ||= super
+            return if !@plaintext_connected
 
-        # Mark the connection as not connected due to the pending SSL handshake.
-        @connected = false
+            # Mark the connection as not connected due to the pending SSL handshake.
+            @connected = false
 
-        @socket.connect_nonblock
-        @ssl_connected = @connected = true
-    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS, OpenSSL::SSL::SSLError
+            @socket.connect_nonblock
+            @ssl_connected = @connected = true
+        end
+    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+    rescue Error => e
+        close e
     end
 
+    # First checks if there's a pending SSL #accept operation when this
+    # connection is a server handler which has been passed an accepted
+    # plaintext connection.
+    #
     # @private
     def _write( *args )
         return ssl_accept if accept?
@@ -88,6 +106,10 @@ module TLS
         super( *args )
     end
 
+    # First checks if there's a pending SSL #accept operation when this
+    # connection is a server handler which has been passed an accepted
+    # plaintext connection.
+    #
     # @private
     def _read
         return ssl_accept if accept?
@@ -98,8 +120,13 @@ module TLS
     private
 
     def ssl_accept
-        @accepted = !!@socket.accept_nonblock
-    rescue IO::WaitReadable, IO::WaitWritable, OpenSSL::SSL::SSLError
+        Error.translate do
+            @accepted = !!@socket.accept_nonblock
+        end
+    rescue IO::WaitReadable, IO::WaitWritable
+    rescue Error => e
+        close e
+        false
     end
 
     def accept?
@@ -117,15 +144,19 @@ module TLS
     #
     # @private
     def socket_accept
-        socket = to_io.accept_nonblock
+        Error.translate do
+            socket = to_io.accept_nonblock
 
-        ssl_socket = OpenSSL::SSL::SSLSocket.new(
-            socket,
-            @ssl_context
-        )
-        ssl_socket.sync_close = true
-        ssl_socket
-    rescue IO::WaitReadable, IO::WaitWritable, OpenSSL::SSL::SSLError
+            ssl_socket = OpenSSL::SSL::SSLSocket.new(
+                socket,
+                @ssl_context
+            )
+            ssl_socket.sync_close = true
+            ssl_socket
+        end
+    rescue IO::WaitReadable, IO::WaitWritable
+    rescue Error => e
+        close e
     end
 
 end

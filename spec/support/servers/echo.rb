@@ -4,8 +4,8 @@ loop do
     Thread.new server.accept do |socket|
         begin
             loop do
-                next if !(line = socket.gets)
-                socket.write( line )
+                next if (data = socket.readpartial(99999)).to_s.empty?
+                socket.write( data )
             end
         rescue EOFError, Errno::EPIPE
             socket.close

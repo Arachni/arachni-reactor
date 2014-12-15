@@ -51,7 +51,7 @@ class Error < Arachni::Reactor::Error
         # aren't any specific exceptions for these.
         #
         # Why make things easy and clean, right?
-        rescue OpenSSL::OpenSSLError => e
+        rescue OpenSSL::SSL::SSLError, OpenSSL::OpenSSLError => e
             raise_with_proper_backtrace( e, SSL )
         end
 

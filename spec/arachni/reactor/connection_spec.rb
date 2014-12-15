@@ -46,7 +46,14 @@ describe Arachni::Reactor::Connection do
     let(:echo_client_handler) { EchoClient.new }
 
     let(:peer_client_socket) { tcp_connect( host, port ) }
-    let(:peer_server_socket) { tcp_server( host, port ) }
+    let(:peer_server_socket) do
+        s = tcp_server( host, port )
+        Thread.new do
+            @accepted = s.accept
+        end
+        s
+    end
+    let(:accepted) { @accepted }
 
     let(:client_socket) { tcp_socket }
     let(:server_socket) { tcp_server( host, port ) }

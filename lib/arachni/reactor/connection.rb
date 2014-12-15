@@ -176,74 +176,6 @@ class Connection
         nil
     end
 
-    # @note Will call {#on_write} every time any of the buffer is consumed,
-    #   can be multiple times when performing partial writes.
-    # @note Will call {#on_flush} once all of the buffer has been consumed.
-    #
-    # Processes a `write` event for this connection.
-    #
-    # Consumes and writes {BLOCK_SIZE} amount of data from the the beginning of
-    # the {#write} buffer to the socket.
-    #
-    # @return   [Integer]
-    #   Amount of the buffer consumed.
-    #
-    # @private
-    def _write
-        return _connect if !connected?
-
-        chunk = write_buffer.slice( 0, BLOCK_SIZE )
-        total_written = 0
-
-        begin
-            Error.translate do
-                # Send out the buffer, **all** of it, or at least try to.
-                loop do
-                    total_written += written = @socket.write_nonblock( chunk )
-                    write_buffer.slice!( 0, written )
-
-                    # Call #on_write every time any of the buffer is consumed.
-                    on_write
-
-                    break if written == chunk.size
-                    chunk.slice!( 0, written )
-                end
-            end
-
-        # Not ready to read or write yet, we'll catch it on future Reactor ticks.
-        rescue IO::WaitReadable, IO::WaitWritable
-        end
-
-        if write_buffer.empty?
-            @socket.flush
-            on_flush
-        end
-
-        total_written
-    rescue Error => e
-        close e
-    end
-
-    # @note If this is a server {#listener?} it will delegate to {#accept}.
-    # @note If this is a normal socket it will read {BLOCK_SIZE} amount of data.
-    #   and pass it to {#on_read}.
-    #
-    # Processes a `read` event for this connection.
-    #
-    # @private
-    def _read
-        return accept if listener?
-
-        Error.translate do
-            on_read @socket.read_nonblock( BLOCK_SIZE )
-        end
-
-    # Not ready to read or write yet, we'll catch it on future Reactor ticks.
-    rescue IO::WaitReadable, IO::WaitWritable
-    rescue Error => e
-        close e
-    end
-
     # Accepts a new client connection.
     #
     # @return   [Connection, nil]
@@ -288,16 +220,90 @@ class Connection
         !!@connected
     end
 
+    # @private
     def _connect
-        return if connected?
+        return true if unix? || connected?
 
-        socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+        Error.translate do
+            socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+        end
 
         @connected = true
         on_connect
 
         true
     rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+    rescue Error => e
+        close e
+    end
+
+    # @note If this is a server {#listener?} it will delegate to {#accept}.
+    # @note If this is a normal socket it will read {BLOCK_SIZE} amount of data.
+    #   and pass it to {#on_read}.
+    #
+    # Processes a `read` event for this connection.
+    #
+    # @private
+    def _read
+        return _connect if !listener? && !connected?
+        return accept   if listener?
+
+        Error.translate do
+            on_read @socket.read_nonblock( BLOCK_SIZE )
+        end
+
+    # Not ready to read or write yet, we'll catch it on future Reactor ticks.
+    rescue IO::WaitReadable, IO::WaitWritable
+    rescue Error => e
+        close e
+    end
+
+    # @note Will call {#on_write} every time any of the buffer is consumed,
+    #   can be multiple times when performing partial writes.
+    # @note Will call {#on_flush} once all of the buffer has been consumed.
+    #
+    # Processes a `write` event for this connection.
+    #
+    # Consumes and writes {BLOCK_SIZE} amount of data from the the beginning of
+    # the {#write} buffer to the socket.
+    #
+    # @return   [Integer]
+    #   Amount of the buffer consumed.
+    #
+    # @private
+    def _write
+        return _connect if !connected?
+
+        chunk = write_buffer.slice( 0, BLOCK_SIZE )
+        total_written = 0
+
+        begin
+            Error.translate do
+                # Send out the chunk, **all** of it, or at least try to.
+                loop do
+                    total_written += written = @socket.write_nonblock( chunk )
+                    write_buffer.slice!( 0, written )
+
+                    # Call #on_write every time any of the buffer is consumed.
+                    on_write
+
+                    break if written == chunk.size
+                    chunk.slice!( 0, written )
+                end
+            end
+
+        # Not ready to read or write yet, we'll catch it on future Reactor ticks.
+        rescue IO::WaitReadable, IO::WaitWritable
+        end
+
+        if write_buffer.empty?
+            @socket.flush
+            on_flush
+        end
+
+        total_written
+    rescue Error => e
+        close e
     end
 
     private

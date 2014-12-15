@@ -46,13 +46,20 @@ describe Arachni::Reactor::Connection::TLS do
     let(:unix_socket) { unix_connect( @unix_socket ) }
     let(:unix_server_socket) { unix_server( port_to_socket( Servers.available_port ) ) }
 
-    let(:echo_client) { tcp_connect( @host, @port ) }
+    let(:echo_client) { tcp_socket }
     let(:echo_client_handler) { EchoClientTLS.new }
 
     let(:peer_client_socket) { tcp_ssl_connect( host, port ) }
-    let(:peer_server_socket) { tcp_ssl_server( host, port ) }
+    let(:peer_server_socket) do
+        s = tcp_ssl_server( host, port )
+        Thread.new do
+            @accepted = s.accept
+        end
+        s
+    end
+    let(:accepted) { @accepted }
 
-    let(:client_socket) { tcp_connect( host, port ) }
+    let(:client_socket) { tcp_socket }
     let(:server_socket) { tcp_server( host, port ) }
 
     let(:connection) { TLSHandler.new }

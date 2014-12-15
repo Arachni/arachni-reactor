@@ -55,6 +55,10 @@ def tcp_server( host, port )
     TCPServer.new( host, port )
 end
 
+def tcp_ssl_socket( host, port, options = {}  )
+    convert_client_to_ssl( tcp_socket, options )
+end
+
 def tcp_ssl_connect( host, port, options = {}  )
     convert_client_to_ssl( tcp_connect( host, port ), options )
 end

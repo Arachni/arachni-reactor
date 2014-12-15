@@ -636,28 +636,47 @@ class Reactor
     #       {Connection#has_outgoing_data? outgoing buffer).
     #   * `:error`
     def select_connections
-        grouped_sockets =
+        readables = read_sockets
+
+        selected_sockets =
             begin
                 Connection::Error.translate do
                     select(
-                        read_sockets,
+                        readables,
                         write_sockets,
-                        read_sockets, # Read sockets are actually all connected sockets.
+                        all_sockets,
                         @select_timeout
                     )
                 end
-            rescue Connection::Error
+            rescue Connection::Error => e
                 nil
             end
 
-        return {} if !grouped_sockets
+        selected_sockets ||= [[],[],[]]
+
+        # SSL sockets maintain their own buffer whose state can't be checked by
+        # Kernel.select, leading to cases where the SSL buffer isn't empty,
+        # even though Kernel.select says that there's nothing to read.
+        #
+        # So force a read for SSL sockets to cover all our bases.
+        #
+        # This is apparent especially on JRuby.
+        (readables - selected_sockets[0]).each do |socket|
+            next if !@connections[socket].socket.is_a?( OpenSSL::SSL::SSLSocket )
+            selected_sockets[0] << socket
+        end
+
+        if selected_sockets[0].empty? && selected_sockets[1].empty? &&
+            selected_sockets[2].empty?
+            return {}
+        end
 
         {
             # Since these will be processed in order, it's better have the write
             # ones first to flush the buffers ASAP.
-            write:   connections_from_sockets( grouped_sockets[1] ),
-            read:    connections_from_sockets( grouped_sockets[0] ),
-            error:   connections_from_sockets( grouped_sockets[2] )
+            write:   connections_from_sockets( selected_sockets[1] ),
+            read:    connections_from_sockets( selected_sockets[0] ),
+            error:   connections_from_sockets( selected_sockets[2] )
         }
     end
 
@@ -668,6 +687,10 @@ class Reactor
             next if !connection.listener? && !connection.connected?
             socket
         end.compact
+    end
+
+    def all_sockets
+        connections.keys
     end
 
     # @return   [Array<Socket>]
