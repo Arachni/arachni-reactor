@@ -9,7 +9,7 @@
 module Arachni
 class Reactor
 
-    VERSION = '0.1.0.beta5'
+    VERSION = '0.1.0.beta6'
 
 end
 end
