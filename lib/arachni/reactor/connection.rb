@@ -8,6 +8,7 @@
 
 require_relative 'connection/error'
 require_relative 'connection/callbacks'
+require_relative 'connection/peer_info'
 require_relative 'connection/tls'
 
 module Arachni
