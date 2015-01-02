@@ -499,7 +499,7 @@ class Reactor
 
         schedule do
             connection.reactor = self
-            @connections[connection.socket] = connection
+            @connections[connection.to_io] = connection
             connection.on_attach
         end
     end
@@ -516,7 +516,7 @@ class Reactor
 
         schedule do
             connection.on_detach
-            @connections.delete connection.socket
+            @connections.delete connection.to_io
             connection.reactor = nil
         end
     end
@@ -524,7 +524,7 @@ class Reactor
     # @return   [Bool]
     #   `true` if the connection is attached, `false` otherwise.
     def attached?( connection )
-        @connections.include? connection.socket
+        @connections.include? connection.to_io
     end
 
     private
@@ -669,7 +669,7 @@ class Reactor
         #
         # This is apparent especially on JRuby.
         (readables - selected_sockets[0]).each do |socket|
-            next if !@connections[socket].socket.is_a?( OpenSSL::SSL::SSLSocket )
+            next if !socket.is_a?( OpenSSL::SSL::SSLSocket )
             selected_sockets[0] << socket
         end
 
@@ -690,23 +690,23 @@ class Reactor
     # @return   [Array<Socket>]
     #   Sockets of all connections, we want to be ready to read at any time.
     def read_sockets
-        @connections.map do |socket, connection|
+        @connections.map do |_, connection|
             next if !connection.listener? && !connection.connected?
-            socket
+            connection.socket
         end.compact
     end
 
     def all_sockets
-        connections.keys
+        @connections.values.map(&:socket)
     end
 
     # @return   [Array<Socket>]
     #   Sockets of connections with
     #   {Connection#has_outgoing_data? outgoing data}.
     def write_sockets
-        @connections.map do |socket, connection|
+        @connections.map do |_, connection|
             next if connection.connected? && !connection.has_outgoing_data?
-            socket
+            connection.socket
         end.compact
     end
 
@@ -715,7 +715,7 @@ class Reactor
     end
 
     def connection_from_socket( socket )
-        @connections[socket]
+        @connections[socket.to_io]
     end
 
 end
