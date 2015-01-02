@@ -4,7 +4,7 @@
 
 - Cleaned up connection handling structure for JRuby support.
 - `Connection`
-    - Removed `PeerInfo`.
+    - `PeerInfo` now not included by default and only available for servers.
 
 ## Version 0.1.0.beta5 _(September 4, 2014)_
 
