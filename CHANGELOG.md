@@ -1,6 +1,6 @@
 # ChangeLog
 
-## _Under development_
+## Version 0.1.0
 
 - Cleaned up connection handling structure for JRuby support.
 - `Connection`

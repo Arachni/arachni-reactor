@@ -3,7 +3,7 @@
 <table>
     <tr>
         <th>Version</th>
-        <td>0.1.0.beta6</td>
+        <td>0.1.0</td>
     </tr>
     <tr>
         <th>Github page</th>
@@ -63,7 +63,7 @@ For examples please see the `examples/` directory.
 
 ## Installation
 
-    gem install arachni-reactor --pre
+    gem install arachni-reactor
 
 ## Running the Specs
 
