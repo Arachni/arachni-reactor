@@ -661,6 +661,10 @@ class Reactor
 
         selected_sockets ||= [[],[],[]]
 
+
+        # ap selected_sockets.flatten.size
+        # ap selected_sockets[0].size
+
         # SSL sockets maintain their own buffer whose state can't be checked by
         # Kernel.select, leading to cases where the SSL buffer isn't empty,
         # even though Kernel.select says that there's nothing to read.
@@ -668,9 +672,11 @@ class Reactor
         # So force a read for SSL sockets to cover all our bases.
         #
         # This is apparent especially on JRuby.
-        (readables - selected_sockets[0]).each do |socket|
-            next if !socket.is_a?( OpenSSL::SSL::SSLSocket )
-            selected_sockets[0] << socket
+        if readables.size != selected_sockets[0].size
+            (readables - selected_sockets[0]).each do |socket|
+                next if !socket.is_a?( OpenSSL::SSL::SSLSocket )
+                selected_sockets[0] << socket
+            end
         end
 
         if selected_sockets[0].empty? && selected_sockets[1].empty? &&
