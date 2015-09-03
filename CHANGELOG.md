@@ -1,5 +1,11 @@
 # ChangeLog
 
+## Version 0.1.1
+
+- `Connection`
+    - `#_write` -- Use `String#byteslice` instead of `String#slice` and
+        `String#bytesize` instead of `String#size`.
+
 ## Version 0.1.0
 
 - Cleaned up connection handling structure for JRuby support.

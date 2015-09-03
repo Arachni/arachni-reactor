@@ -277,7 +277,7 @@ class Connection
     def _write
         return _connect if !connected?
 
-        chunk = write_buffer.slice( 0, BLOCK_SIZE )
+        chunk = write_buffer.byteslice( 0, BLOCK_SIZE )
         total_written = 0
 
         begin
@@ -285,13 +285,13 @@ class Connection
                 # Send out the chunk, **all** of it, or at least try to.
                 loop do
                     total_written += written = @socket.write_nonblock( chunk )
-                    write_buffer.slice!( 0, written )
+                    @write_buffer = @write_buffer.byteslice( written..-1 )
 
                     # Call #on_write every time any of the buffer is consumed.
                     on_write
 
-                    break if written == chunk.size
-                    chunk.slice!( 0, written )
+                    break if written == chunk.bytesize
+                    chunk = chunk.byteslice( written..-1 )
                 end
             end
 
