@@ -41,17 +41,21 @@ class Connection
     #   `true` when using a UNIX-domain socket, `nil` if no {#socket} is
     #   available, `false` otherwise.
     def unix?
+        return @is_unix if !@is_unix.nil?
         return if !to_io
         return false if !Arachni::Reactor.supports_unix_sockets?
-        to_io.is_a?( UNIXServer ) || to_io.is_a?( UNIXSocket )
+
+        @is_unix = to_io.is_a?( UNIXServer ) || to_io.is_a?( UNIXSocket )
     end
 
     # @return   [Bool]
     #   `true` when using an Internet socket, `nil` if no {#socket} is
     #   available, `false` otherwise.
     def inet?
+        return @is_inet if !@is_inet.nil?
         return if !to_io
-        to_io.is_a?( TCPServer ) || to_io.is_a?( TCPSocket ) || to_io.is_a?( Socket )
+
+        @is_inet = to_io.is_a?( TCPServer ) || to_io.is_a?( TCPSocket ) || to_io.is_a?( Socket )
     end
 
     # @return   [IO, nil]
@@ -64,8 +68,10 @@ class Connection
     # @return   [Bool]
     #   `true` if the connection is a server listener.
     def listener?
+        return @is_listener if !@is_listener.nil?
         return if !to_io
-        to_io.is_a?( TCPServer ) || (unix? && to_io.is_a?( UNIXServer ))
+
+        @is_listener = to_io.is_a?( TCPServer ) || (unix? && to_io.is_a?( UNIXServer ))
     end
 
     # @note The data will be buffered and sent in future {Reactor} ticks.
