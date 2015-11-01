@@ -5,6 +5,7 @@
 - `Connection`
     - `#_write` -- Use `String#byteslice` instead of `String#slice` and
         `String#bytesize` instead of `String#size`.
+    - `Error.translate` -- Translate `Errno::ECONNABORTED` as `Error::Reset`.
 
 ## Version 0.1.0
 

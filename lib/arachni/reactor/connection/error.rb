@@ -35,7 +35,7 @@ class Error < Arachni::Reactor::Error
             # non-existent server.
             Errno::EADDRINUSE => e
             raise_with_proper_backtrace( e, Refused )
-        rescue Errno::ECONNRESET => e
+        rescue Errno::ECONNRESET, Errno::ECONNABORTED => e
             raise_with_proper_backtrace( e, Reset )
         rescue Errno::EACCES => e
             raise_with_proper_backtrace( e, Permission )
