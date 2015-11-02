@@ -234,14 +234,14 @@ class Connection
                 socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
             end
         # Already connected. :)
-        rescue Errno::EISCONN
+        rescue Errno::EISCONN, Errno::EALREADY
         end
 
         @connected = true
         on_connect
 
         true
-    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS, Errno::EALREADY
+    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
     rescue Error => e
         close e
     end
