@@ -241,7 +241,7 @@ class Connection
         on_connect
 
         true
-    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS, Errno::EALREADY
     rescue Error => e
         close e
     end
