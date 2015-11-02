@@ -35,7 +35,9 @@ describe Arachni::Reactor::Tasks::Delayed do
                 time = Time.now
                 task.call while called < 1
 
-                (Time.now - time).round(2).should == 0.25
+                elapsed = (Time.now - time).round(2)
+                elapsed.should >= 0.25
+                elapsed.should < 0.30
             end
 
             it 'calls #done' do

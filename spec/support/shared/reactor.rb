@@ -816,6 +816,9 @@ shared_examples_for 'Arachni::Reactor' do
                 subject.listen( host, port, echo_server_handler, *options )
 
                 @socket = tcp_writer.call( host, port, data )
+
+                sleep 5
+
                 subject.connections.values.first.initialization_args.should == options
             end
         end
