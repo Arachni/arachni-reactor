@@ -23,7 +23,7 @@
     </tr>
     <tr>
         <th>Copyright</th>
-        <td>2014</td>
+        <td>2014-2016</td>
     </tr>
     <tr>
         <th>License</th>
