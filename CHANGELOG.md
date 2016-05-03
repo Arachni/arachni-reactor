@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.1.2
+
+ - `Reactor` -- Reduced object allocations.
+
 ## Version 0.1.1
 
 - `Connection`
