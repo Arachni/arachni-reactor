@@ -692,24 +692,28 @@ class Reactor
     # @return   [Array<Socket>]
     #   Sockets of all connections, we want to be ready to read at any time.
     def read_sockets
-        @connections.map do |_, connection|
+        s = []
+        @connections.each do |_, connection|
             next if !connection.listener? && !connection.connected?
-            connection.socket
-        end.compact
-    end
-
-    def all_sockets
-        @connections.values.map(&:socket)
+            s << connection.socket
+        end
+        s
     end
 
     # @return   [Array<Socket>]
     #   Sockets of connections with
     #   {Connection#has_outgoing_data? outgoing data}.
     def write_sockets
-        @connections.map do |_, connection|
+        s = []
+        @connections.each do |_, connection|
             next if connection.connected? && !connection.has_outgoing_data?
-            connection.socket
-        end.compact
+            s << connection.socket
+        end
+        s
+    end
+
+    def all_sockets
+        @connections.values.map(&:socket)
     end
 
     def connections_from_sockets( sockets )
