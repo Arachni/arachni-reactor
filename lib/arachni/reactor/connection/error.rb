@@ -24,7 +24,7 @@ class Error < Arachni::Reactor::Error
         # @param  [Block] block Block to run.
         def translate( &block )
             block.call
-        rescue IOError, Errno::ENOTCONN => e
+        rescue IOError, Errno::ENOTCONN, Errno::ENOTSOCK => e
             raise_with_proper_backtrace( e, Closed )
         rescue SocketError, Errno::ENOENT => e
             raise_with_proper_backtrace( e, HostNotFound )

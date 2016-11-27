@@ -3,6 +3,7 @@
 ## Version 0.1.2
 
  - `Reactor` -- Reduced object allocations.
+- `Connection::Error.translate` -- Handle `Errno::ENOTSOCK` errors.
 
 ## Version 0.1.1
 
