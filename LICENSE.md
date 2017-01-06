@@ -1,6 +1,6 @@
 # License
 
-    Copyright (C) 2014-2016, Tasos Laskos <tasos.laskos@gmail.com>
+    Copyright (C) 2014-2017, Sarosys LLC <http://www.sarosys.com/>
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,

@@ -23,7 +23,7 @@
     </tr>
     <tr>
         <th>Copyright</th>
-        <td>2014-2016</td>
+        <td>2014-2017 <a href="http://www.sarosys.com">Sarosys LLC</a></td>
     </tr>
     <tr>
         <th>License</th>
