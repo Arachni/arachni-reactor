@@ -32,7 +32,7 @@ describe Arachni::Reactor::Tasks do
         context 'when it does not includes the given task' do
             it 'returns false' do
                 subject << task
-                subject.should_not include another_task
+                subject.include?( another_task ).should be_falsey
             end
         end
     end
@@ -47,19 +47,21 @@ describe Arachni::Reactor::Tasks do
 
             it 'returns it' do
                 subject << task
-                subject.delete( task ).should == task
+                subject.delete( task )
+                task.should == task
             end
 
             it 'removes the #owner association' do
                 subject << task
-                subject.delete( task ).should == task
+                subject.delete( task )
+                task.should == task
                 task.owner.should be_nil
             end
         end
 
         context 'when it does not include the given task' do
             it 'returns nil' do
-                subject.delete( task ).should be_nil
+                subject.delete( task ).should be subject
             end
         end
     end
@@ -125,8 +127,8 @@ describe Arachni::Reactor::Tasks do
 
             subject.call
 
-            called_one.should be_true
-            called_two.should be_true
+            called_one.should be_truthy
+            called_two.should be_truthy
         end
 
         it 'returns self' do

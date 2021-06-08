@@ -2,18 +2,10 @@ require 'spec_helper'
 
 describe Arachni::Reactor::Iterator do
 
-    def get_iterator
-        described_class.new reactor, list, concurrency
-    end
-
-    def get_reactor
-        Arachni::Reactor.new
-    end
-
-    let(:reactor) { get_reactor }
+    let(:reactor) { Arachni::Reactor.new }
     let(:list) { %w(one two three four) }
     let(:concurrency) { list.size }
-    subject { get_iterator }
+    subject { described_class.new( reactor, list, concurrency ) }
 
     describe '#initialize' do
         context 'when the list does not respond to #to_a' do
@@ -25,7 +17,7 @@ describe Arachni::Reactor::Iterator do
         end
 
         context 'when the concurrency is' do
-            context 0 do
+            context '0' do
                 let(:concurrency) { 0 }
 
                 it "raises #{ArgumentError}" do
@@ -62,7 +54,7 @@ describe Arachni::Reactor::Iterator do
                 start  = nil
                 finish = nil
 
-                iter = described_class.new( get_reactor, list, concurrency )
+                iter = described_class.new( Arachni::Reactor.new, list, concurrency )
                 iter.concurrency = concurrency
 
                 iter.reactor.run do
@@ -86,8 +78,8 @@ describe Arachni::Reactor::Iterator do
             high_concurrency = list.size
             low_concurrency  = 1
 
-            high_concurrency_time, low_concurrency_time =
-                runner.call( high_concurrency ), runner.call( low_concurrency )
+            high_concurrency_time = runner.call( high_concurrency )
+            low_concurrency_time  = runner.call( low_concurrency )
 
             low_concurrency_time.should > high_concurrency_time
 
