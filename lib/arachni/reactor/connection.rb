@@ -176,7 +176,7 @@ class Connection
     def close( reason = nil )
         return if closed?
 
-        @reactor.selector.deregister socket
+        p reason
 
         on_close reason
         close_without_callback
@@ -245,7 +245,6 @@ class Connection
 
         true
     rescue IO::WaitReadable, IO::WaitWritable, IO::EINPROGRESSWaitWritable, Errno::EINPROGRESS
-        retry
     rescue Error => e
         close e
     end
