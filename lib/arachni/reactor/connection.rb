@@ -196,12 +196,6 @@ class Connection
         connection = @server_handler.call
         connection.configure socket: accepted, role: :server
 
-        monitor = @reactor.selector.register( accepted, :rw )
-        monitor.value = proc do
-            connection.has_outgoing_data? ?
-              connection._write : connection._read
-        end
-
         @reactor.attach connection
         connection
     end
@@ -264,8 +258,8 @@ class Connection
     #
     # @private
     def _read
-        # return _connect if !listener? && !connected?
-        # return accept   if listener?
+        return _connect if !listener? && !connected?
+        return accept   if listener?
 
         # p __method__
         Error.translate do

@@ -209,12 +209,6 @@ class Reactor
                 connection.configure options.merge( socket: socket, role: :client )
                 connection._connect
 
-                monitor = @selector.register( socket, :rw )
-                monitor.value = proc do
-                    connection.has_outgoing_data? ?
-                      connection._write : connection._read
-                end
-
                 attach connection
             end
         rescue Connection::Error => e
@@ -277,10 +271,6 @@ class Reactor
                 socket = options[:unix_socket] ?
                     listen_unix( options[:unix_socket] ) :
                     listen_tcp( options[:host], options[:port] )
-
-
-                monitor = @selector.register( socket, :r )
-                monitor.value = proc { server.accept }
 
                 server.configure options.merge( socket: socket, role: :server, server_handler: server_handler )
                 attach server
@@ -513,6 +503,12 @@ class Reactor
     # @raise    (see #fail_if_not_running)
     def attach( connection )
         return if attached? connection
+
+        monitor = @selector.register( connection.socket, :rw )
+        monitor.value = proc do
+            connection.has_outgoing_data? ?
+              connection._write : connection._read
+        end
 
         schedule do
             connection.reactor = self
