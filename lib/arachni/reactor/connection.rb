@@ -176,6 +176,8 @@ class Connection
     def close( reason = nil )
         return if closed?
 
+        @reactor.selector.deregister socket
+
         on_close reason
         close_without_callback
         nil
@@ -193,6 +195,13 @@ class Connection
 
         connection = @server_handler.call
         connection.configure socket: accepted, role: :server
+
+        monitor = @reactor.selector.register( accepted, :rw )
+        monitor.value = proc do
+            connection.has_outgoing_data? ?
+              connection._write : connection._read
+        end
+
         @reactor.attach connection
         connection
     end
@@ -241,7 +250,8 @@ class Connection
         on_connect
 
         true
-    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
+    rescue IO::WaitReadable, IO::WaitWritable, IO::EINPROGRESSWaitWritable, Errno::EINPROGRESS
+        retry
     rescue Error => e
         close e
     end
@@ -254,9 +264,10 @@ class Connection
     #
     # @private
     def _read
-        return _connect if !listener? && !connected?
-        return accept   if listener?
+        # return _connect if !listener? && !connected?
+        # return accept   if listener?
 
+        # p __method__
         Error.translate do
             on_read @socket.read_nonblock( BLOCK_SIZE )
         end
@@ -296,6 +307,9 @@ class Connection
                     # Call #on_write every time any of the buffer is consumed.
                     on_write
 
+                    # p written
+                    # p chunk.bytesize
+                    # exit
                     break if written == chunk.bytesize
                     chunk = chunk.byteslice( written..-1 )
                 end

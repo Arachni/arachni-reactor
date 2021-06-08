@@ -22,6 +22,8 @@ Gem::Specification.new do |s|
     s.files            += Dir.glob('lib/**/**')
     s.test_files        = Dir.glob('spec/**/**')
 
+    s.add_dependency 'nio4r'
+
     s.extra_rdoc_files  = %w(README.md LICENSE.md CHANGELOG.md)
     s.rdoc_options      = ['--charset=UTF-8']
 
