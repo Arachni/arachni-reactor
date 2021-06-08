@@ -290,10 +290,10 @@ shared_examples_for 'Arachni::Reactor::Connection' do
 
             reactor.run_in_thread
 
-            connection.attach( reactor ).should be_true
+            connection.attach( reactor ).should be_truthy
             sleep 1
 
-            reactor.attached?( configured ).should be_true
+            reactor.attached?( configured ).should be_truthy
         end
 
         it 'calls #on_attach' do
@@ -319,7 +319,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     connection.attach reactor
                     sleep 0.1 while connection.detached?
 
-                    connection.attach( reactor ).should be_false
+                    connection.attach( reactor ).should be_falsey
                 end
             end
 
@@ -337,11 +337,11 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     r.run_in_thread
 
                     configured.should receive(:on_detach)
-                    connection.attach( r ).should be_true
+                    connection.attach( r ).should be_truthy
 
                     sleep 2
 
-                    r.attached?( configured ).should be_true
+                    r.attached?( configured ).should be_truthy
                 end
             end
         end
@@ -363,7 +363,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
             connection.detach
             sleep 0.1 while connection.attached?
 
-            reactor.attached?( configured ).should be_false
+            reactor.attached?( configured ).should be_falsey
         end
 
         it 'calls #on_detach' do
@@ -582,7 +582,7 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                     end
                 end
 
-                configured.called_on_flush.should be_true
+                configured.called_on_flush.should be_truthy
             end
         end
     end
@@ -601,13 +601,13 @@ shared_examples_for 'Arachni::Reactor::Connection' do
                 configured.write 'test'
                 sleep 0.1 while !configured.has_outgoing_data?
 
-                configured.has_outgoing_data?.should be_true
+                configured.has_outgoing_data?.should be_truthy
             end
         end
 
         context 'when the send-buffer is empty' do
             it 'returns false' do
-                configured.has_outgoing_data?.should be_false
+                configured.has_outgoing_data?.should be_falsey
             end
         end
     end

@@ -6,6 +6,7 @@
 
 =end
 
+require 'set'
 require 'mutex_m'
 
 require_relative 'tasks/base'
@@ -26,7 +27,7 @@ class Tasks
     def initialize
         super
 
-        @tasks = []
+        @tasks = Set.new
     end
 
     # @note Only {Base#hash unique} tasks will be included.
@@ -57,9 +58,9 @@ class Tasks
     #   The task if it was included, `nil` otherwise.
     def delete( task )
         synchronize do
-            task = @tasks.delete( task )
+            @tasks.delete( task )
             task.owner = nil if task
-            task
+            self
         end
     end
 

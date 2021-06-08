@@ -1,4 +1,5 @@
 require 'ap'
+require 'tmpdir'
 require_relative '../lib/arachni/reactor'
 
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each do |f|

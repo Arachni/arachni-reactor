@@ -158,7 +158,7 @@ shared_examples_for 'Arachni::Reactor' do
             end
 
             subject.should_not be_running
-            running.should be_true
+            running.should be_truthy
         end
 
         context 'when no block is given' do
@@ -720,7 +720,7 @@ shared_examples_for 'Arachni::Reactor' do
                     subject.run do
                         Thread.current[:outside_thread] = outside_thread
 
-                        subject.listen( '/socket', echo_server_handler ) do |c|
+                        subject.listen( __FILE__, echo_server_handler ) do |c|
                             def c.on_close( reason )
                                 # Depending on when the error was caught, there
                                 # may not be a reason available.
@@ -735,7 +735,11 @@ shared_examples_for 'Arachni::Reactor' do
                         end
                     end
 
-                    [:error, klass::Connection::Error::Permission].should include Thread.current[:outside_thread][:error]
+                    [
+                      :error,
+                      klass::Connection::Error::Permission,
+                      klass::Connection::Error::Refused
+                    ].should include Thread.current[:outside_thread][:error]
                 end
             end
         end
