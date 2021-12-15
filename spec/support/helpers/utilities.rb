@@ -114,7 +114,7 @@ def convert_server_to_ssl( server, options = {} )
         context.cert.version    = 2
         context.cert.serial     = 1
 
-        context.cert.sign( context.key, OpenSSL::Digest::SHA1.new )
+        context.cert.sign( context.key, OpenSSL::Digest::SHA256.new )
     end
 
     OpenSSL::SSL::SSLServer.new( server, context )

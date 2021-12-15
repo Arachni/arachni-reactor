@@ -158,7 +158,7 @@ shared_examples_for 'Arachni::Reactor' do
             end
 
             subject.should_not be_running
-            running.should be_true
+            running.should be_truthy
         end
 
         context 'when no block is given' do

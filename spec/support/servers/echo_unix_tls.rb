@@ -15,7 +15,7 @@ loop do
                 next if (data = socket.gets).to_s.empty?
                 socket.write( data )
             end
-        rescue EOFError, Errno::EPIPE
+        rescue EOFError, Errno::EPIPE, Errno::ECONNRESET
             socket.close
         end
     end

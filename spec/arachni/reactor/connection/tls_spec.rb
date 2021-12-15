@@ -129,10 +129,12 @@ describe Arachni::Reactor::Connection::TLS do
                         reactor.listen( host, port, TLSHandler, options )
 
                         client.write data
+                        sleep 1
+
                         reactor.stop
                         reactor.wait rescue Arachni::Reactor::Error::NotRunning
 
-                        received_data.should == data
+                        expect(received_data).to eq data
                     end
                 end
 
@@ -324,7 +326,8 @@ describe Arachni::Reactor::Connection::TLS do
                                 connection.write data
                             end
 
-                            received.should == data
+                            sleep 1
+                            expect(received).to eq data
                         end
                     end
 

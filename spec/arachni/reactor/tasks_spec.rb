@@ -25,14 +25,14 @@ describe Arachni::Reactor::Tasks do
         context 'when it includes the given task' do
             it 'returns true' do
                 subject << task
-                subject.should include task
+                expect(subject.include?( task )).to be_truthy
             end
         end
 
         context 'when it does not includes the given task' do
             it 'returns false' do
                 subject << task
-                subject.should_not include another_task
+                expect(subject.include?( another_task )).to be_falsey
             end
         end
     end
@@ -125,8 +125,8 @@ describe Arachni::Reactor::Tasks do
 
             subject.call
 
-            called_one.should be_true
-            called_two.should be_true
+            called_one.should be_truthy
+            called_two.should be_truthy
         end
 
         it 'returns self' do

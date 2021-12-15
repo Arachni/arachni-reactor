@@ -25,7 +25,7 @@ describe Arachni::Reactor::Iterator do
         end
 
         context 'when the concurrency is' do
-            context 0 do
+            context '0' do
                 let(:concurrency) { 0 }
 
                 it "raises #{ArgumentError}" do
