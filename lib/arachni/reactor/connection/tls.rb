@@ -113,6 +113,7 @@ module TLS
         return ssl_accept if accept?
 
         super
+    rescue OpenSSL::SSL::SSLErrorWaitReadable
     end
 
     private
