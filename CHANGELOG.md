@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.1.3
+
+- `Connection::TLS#_read` -- Handle `OpenSSL::SSL::SSLErrorWaitReadable`.
+
 ## Version 0.1.2
 
  - `Reactor` -- Reduced object allocations.
