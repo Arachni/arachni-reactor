@@ -6,7 +6,7 @@
 
 =end
 
-require 'socket'
+require 'nio'
 require 'openssl'
 
 module Arachni
@@ -79,6 +79,8 @@ class Reactor
     #   Amount of ticks.
     attr_reader   :ticks
 
+    attr_reader   :selector
+
     DEFAULT_OPTIONS = {
         select_timeout:    0.02,
         max_tick_interval: 0.02
@@ -133,12 +135,12 @@ class Reactor
         @max_tick_interval = options[:max_tick_interval]
         @select_timeout    = options[:select_timeout]
 
-        # Socket => Connection
-        @connections = {}
-        @stop        = false
-        @ticks       = 0
-        @thread      = nil
-        @tasks       = Tasks.new
+        @stop   = false
+        @ticks  = 0
+        @thread = nil
+        @tasks  = Tasks.new
+
+        @selector = NIO::Selector.new
 
         @error_handlers = Tasks.new
         @shutdown_tasks = Tasks.new
@@ -193,21 +195,20 @@ class Reactor
         options = determine_connection_options( *args )
 
         connection = options[:handler].new( *options[:handler_options] )
-        connection.reactor = self
-        block.call connection if block_given?
 
-        begin
-            Connection::Error.translate do
-                socket = options[:unix_socket] ?
-                    connect_unix( options[:unix_socket] ) : connect_tcp
-
-                connection.configure options.merge( socket: socket, role: :client )
-                attach connection
-            end
-        rescue Connection::Error => e
-            connection.close e
+        if options[:unix_socket]
+            io = connect_unix( options[:unix_socket] )
+        else
+            io = connect_tcp
         end
 
+        connection.reactor = self
+        connection.configure options.merge( socket: io, role: :client )
+
+        monitor = @selector.register( io, :rw )
+        monitor.value = connection
+
+        attach connection
         connection
     end
 
@@ -250,28 +251,19 @@ class Reactor
 
         options = determine_connection_options( *args )
 
-        server_handler = proc do
-            c = options[:handler].new( *options[:handler_options] )
-            c.reactor = self
-            block.call c if block_given?
-            c
-        end
+        server = options[:handler].new( *options[:handler_options] )
 
-        server = server_handler.call
+        io = options[:unix_socket] ?
+               listen_unix( options[:unix_socket] ) :
+               listen_tcp( options[:host], options[:port] )
 
-        begin
-            Connection::Error.translate do
-                socket = options[:unix_socket] ?
-                    listen_unix( options[:unix_socket] ) :
-                    listen_tcp( options[:host], options[:port] )
+        server.reactor = self
+        server.configure options.merge( socket: io, role: :server )
 
-                server.configure options.merge( socket: socket, role: :server, server_handler: server_handler )
-                attach server
-            end
-        rescue Connection::Error => e
-            server.close e
-        end
+        monitor = @selector.register( io, :r )
+        monitor.value = server
 
+        attach server
         server
     end
 
@@ -313,7 +305,7 @@ class Reactor
             break if @stop
 
             begin
-                process_connections
+                select_connections
             rescue => e
                 @error_handlers.call( e )
             end
@@ -499,7 +491,6 @@ class Reactor
 
         schedule do
             connection.reactor = self
-            @connections[connection.to_io] = connection
             connection.on_attach
         end
     end
@@ -515,8 +506,9 @@ class Reactor
         return if !attached?( connection )
 
         schedule do
+            @selector.deregister connection.socket
+
             connection.on_detach
-            @connections.delete connection.to_io
             connection.reactor = nil
         end
     end
@@ -524,7 +516,7 @@ class Reactor
     # @return   [Bool]
     #   `true` if the connection is attached, `false` otherwise.
     def attached?( connection )
-        @connections.include? connection.to_io
+        selector.registered? connection.socket
     end
 
     private
@@ -551,32 +543,8 @@ class Reactor
              'The host OS does not support UNIX-domain sockets.'
     end
 
-    def process_connections
-        if @connections.empty?
-            sleep @max_tick_interval
-            return
-        end
-
-        # Required for OSX as it connects immediately and then #select returns
-        # nothing as there's no activity, given that, OpenSSL doesn't get a chance
-        # to do its handshake so explicitly connect pending sockets, bypassing #select.
-        @connections.each do |_, connection|
-            connection._connect if !connection.connected?
-        end
-
-        # Get connections with available events - :read, :write, :error.
-        selected = select_connections
-
-        # Close connections that have errors.
-        [selected.delete(:error)].flatten.compact.each(&:close)
-
-        # Call the corresponding event on the connections.
-        selected.each { |event, connections| connections.each(&"_#{event}".to_sym) }
-    end
-
     def determine_connection_options( *args )
         options = {}
-        host = port = unix_socket = nil
 
         if args[1].is_a? Integer
             options[:host], options[:port], options[:handler], *handler_options = *args
@@ -631,7 +599,7 @@ class Reactor
 
     # Closes all client connections, both ingress and egress.
     def close_connections
-        @connections.values.each(&:close)
+        @selector.close
     end
 
     # @return   [Hash]
@@ -643,85 +611,54 @@ class Reactor
     #       {Connection#has_outgoing_data? outgoing buffer).
     #   * `:error`
     def select_connections
-        readables = read_sockets
+        if @selector.empty?
+            sleep @max_tick_interval
+            return
+        end
 
-        selected_sockets =
-            begin
-                Connection::Error.translate do
-                    select(
-                        readables,
-                        write_sockets,
-                        all_sockets,
-                        @select_timeout
-                    )
+        @selector.select @select_timeout do |monitor|
+            connection = monitor.value
+            io         = connection.socket
+
+            case monitor.io
+            when TCPServer
+                next if !monitor.readable?
+
+                client = io.accept_nonblock
+
+                c = connection.class.new( connection.options )
+                monitor = @selector.register( client, :rw )
+                monitor.value = c
+
+                c.reactor = self
+
+                c.configure(
+                  socket: client,
+                  host:   connection.host,
+                  port:   connection.port,
+                  unix:   connection.unix
+                )
+                attach c
+
+                c._connected!
+                c.on_connect
+
+            when TCPSocket, Socket, OpenSSL::SSL::SSLSocket
+                if !connection.connected?
+                    connection._connect
+                    next if !connection.connected?
                 end
-            rescue Connection::Error => e
-                nil
-            end
 
-        selected_sockets ||= [[],[],[]]
+                if monitor.writable? && connection.has_outgoing_data?
+                    connection._write
+                end
 
-        # SSL sockets maintain their own buffer whose state can't be checked by
-        # Kernel.select, leading to cases where the SSL buffer isn't empty,
-        # even though Kernel.select says that there's nothing to read.
-        #
-        # So force a read for SSL sockets to cover all our bases.
-        #
-        # This is apparent especially on JRuby.
-        if readables.size != selected_sockets[0].size
-            (readables - selected_sockets[0]).each do |socket|
-                next if !socket.is_a?( OpenSSL::SSL::SSLSocket )
-                selected_sockets[0] << socket
+                if monitor.readable?
+                    connection._read
+                end
+
             end
         end
-
-        if selected_sockets[0].empty? && selected_sockets[1].empty? &&
-            selected_sockets[2].empty?
-            return {}
-        end
-
-        {
-            # Since these will be processed in order, it's better have the write
-            # ones first to flush the buffers ASAP.
-            write:   connections_from_sockets( selected_sockets[1] ),
-            read:    connections_from_sockets( selected_sockets[0] ),
-            error:   connections_from_sockets( selected_sockets[2] )
-        }
-    end
-
-    # @return   [Array<Socket>]
-    #   Sockets of all connections, we want to be ready to read at any time.
-    def read_sockets
-        s = []
-        @connections.each do |_, connection|
-            next if !connection.listener? && !connection.connected?
-            s << connection.socket
-        end
-        s
-    end
-
-    # @return   [Array<Socket>]
-    #   Sockets of connections with
-    #   {Connection#has_outgoing_data? outgoing data}.
-    def write_sockets
-        s = []
-        @connections.each do |_, connection|
-            next if connection.connected? && !connection.has_outgoing_data?
-            s << connection.socket
-        end
-        s
-    end
-
-    def all_sockets
-        @connections.values.map(&:socket)
-    end
-
-    def connections_from_sockets( sockets )
-        sockets.map { |s| connection_from_socket( s ) }
-    end
-
-    def connection_from_socket( socket )
-        @connections[socket.to_io]
     end
 
 end

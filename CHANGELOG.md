@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.1.4
+
+- Updated to use `nio4r` for socket handling.
+
 ## Version 0.1.3
 
 - `Connection::TLS#_read` -- Handle `OpenSSL::SSL::SSLErrorWaitReadable`.

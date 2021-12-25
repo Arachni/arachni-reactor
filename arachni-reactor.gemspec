@@ -25,6 +25,8 @@ Gem::Specification.new do |s|
     s.extra_rdoc_files  = %w(README.md LICENSE.md CHANGELOG.md)
     s.rdoc_options      = ['--charset=UTF-8']
 
+    s.add_dependency 'nio4r'
+
     s.description = <<description
     Arachni::Reactor is a simple, lightweight, pure-Ruby implementation of the Reactor
     pattern, mainly focused on network connections -- and less so on generic tasks.

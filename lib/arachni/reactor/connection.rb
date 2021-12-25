@@ -37,6 +37,16 @@ class Connection
     #   `:client` or `:server`
     attr_reader   :role
 
+    attr_reader   :host
+    attr_reader   :port
+    attr_reader   :unix
+
+    attr_reader   :options
+
+    def initialize( options = nil )
+        @options = options
+    end
+
     # @return   [Bool, nil]
     #   `true` when using a UNIX-domain socket, `nil` if no {#socket} is
     #   available, `false` otherwise.
@@ -181,40 +191,17 @@ class Connection
         nil
     end
 
-    # Accepts a new client connection.
-    #
-    # @return   [Connection, nil]
-    #   New connection or `nil` if the socket isn't ready to accept new
-    #   connections yet.
-    #
-    # @private
-    def accept
-        return if !(accepted = socket_accept)
-
-        connection = @server_handler.call
-        connection.configure socket: accepted, role: :server
-        @reactor.attach connection
-        connection
-    end
-
-    # @param    [Socket]    socket
-    #   Ruby `Socket` associated with this connection.
-    # @param    [Symbol]    role
-    #   `:server` or `:client`.
-    # @param    [Block]    server_handler
-    #   Block that generates a handler as specified in {Reactor#listen}.
-    #
     # @private
     def configure( options = {} )
         @socket         = options[:socket]
         @role           = options[:role]
         @host           = options[:host]
         @port           = options[:port]
-        @server_handler = options[:server_handler]
+        @unix           = options[:unix]
 
-        # If we're a server without a handler then we're an accepted connection.
-        if unix? || role == :server
-            @connected = true
+        # # If we're a server without a handler then we're an accepted connection.
+        if unix? || @role == :server
+            _connected!
             on_connect
         end
 
@@ -225,14 +212,18 @@ class Connection
         !!@connected
     end
 
-    # @private
+    def _connected!
+        @connected = true
+    end
+
     def _connect
-        return true if unix? || connected?
+        return true if unix? || @connected
 
         begin
             Error.translate do
-                socket.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
+                to_io.connect_nonblock( Socket.sockaddr_in( @port, @host ) )
             end
+        rescue Errno::EINPROGRESS
         # Already connected. :)
         rescue Errno::EISCONN, Errno::EALREADY
         end
@@ -244,6 +235,7 @@ class Connection
     rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
     rescue Error => e
         close e
+        false
     end
 
     # @note If this is a server {#listener?} it will delegate to {#accept}.
@@ -254,9 +246,6 @@ class Connection
     #
     # @private
     def _read
-        return _connect if !listener? && !connected?
-        return accept   if listener?
-
         Error.translate do
             on_read @socket.read_nonblock( BLOCK_SIZE )
         end
@@ -281,8 +270,6 @@ class Connection
     #
     # @private
     def _write
-        return _connect if !connected?
-
         chunk = write_buffer.byteslice( 0, BLOCK_SIZE )
         total_written = 0
 
@@ -319,20 +306,6 @@ class Connection
 
     def write_buffer
         @write_buffer ||= ''
-    end
-
-    # Accepts a new client connection.
-    #
-    # @return   [Socket, nil]
-    #   New connection or `nil` if the socket isn't ready to accept new
-    #   connections yet.
-    #
-    # @private
-    def socket_accept
-        begin
-            @socket.accept_nonblock
-        rescue IO::WaitReadable, IO::WaitWritable
-        end
     end
 
 end

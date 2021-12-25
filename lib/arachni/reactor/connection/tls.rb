@@ -6,6 +6,33 @@
 
 =end
 
+module OpenSSL
+module SSL
+class SSLServer
+    unless public_method_defined? :accept_nonblock
+        def accept_nonblock
+            sock = @svr.accept_nonblock
+
+            begin
+                ssl = OpenSSL::SSL::SSLSocket.new( sock, @ctx )
+                ssl.sync_close = true
+                ssl.accept if @start_immediately
+                ssl
+            rescue SSLError => e
+                if ssl
+                    ssl.close
+                else
+                    sock.close
+                end
+
+                raise e
+            end
+        end
+    end
+end
+end
+end
+
 module Arachni
 class Reactor
 class Connection
@@ -56,104 +83,50 @@ module TLS
             @ssl_context.cert.sign( @ssl_context.key, OpenSSL::Digest::SHA1.new )
         end
 
+        @reactor.selector.deregister( @socket )
+
         if @role == :server
             @socket = OpenSSL::SSL::SSLServer.new( @socket, @ssl_context )
+            @socket.start_immediately = true
+
+            monitor = @reactor.selector.register( @socket, :r )
+            monitor.value = self
+
+            @ssl_connected = true
         else
             @socket = OpenSSL::SSL::SSLSocket.new( @socket, @ssl_context )
             @socket.sync_close = true
 
-            # We've switched to SSL, a connection needs to be re-established
-            # via the SSL handshake.
-            @connected         = false
-
-            _connect if unix?
+            monitor = @reactor.selector.register( @socket, :rw )
+            monitor.value = self
         end
 
         @socket
+    end
+
+    def connected?
+        !!@ssl_connected
+    end
+
+    def _connected!
+        @ssl_connected = true
     end
 
     # Performs an SSL handshake in addition to a plaintext connect operation.
     #
     # @private
     def _connect
-        return if @ssl_connected
+        return if connected?
 
         Error.translate do
             @plaintext_connected ||= super
             return if !@plaintext_connected
 
-            # Mark the connection as not connected due to the pending SSL handshake.
-            @connected = false
-
             @socket.connect_nonblock
-            @ssl_connected = @connected = true
+
+            _connected!
         end
-    rescue IO::WaitReadable, IO::WaitWritable, Errno::EINPROGRESS
-    rescue Error => e
-        close e
-    end
-
-    # First checks if there's a pending SSL #accept operation when this
-    # connection is a server handler which has been passed an accepted
-    # plaintext connection.
-    #
-    # @private
-    def _write( *args )
-        return ssl_accept if accept?
-
-        super( *args )
-    end
-
-    # First checks if there's a pending SSL #accept operation when this
-    # connection is a server handler which has been passed an accepted
-    # plaintext connection.
-    #
-    # @private
-    def _read
-        return ssl_accept if accept?
-
-        super
-    rescue OpenSSL::SSL::SSLErrorWaitReadable
-    end
-
-    private
-
-    def ssl_accept
-        Error.translate do
-            @accepted = !!@socket.accept_nonblock
-        end
-    rescue IO::WaitReadable, IO::WaitWritable
-    rescue Error => e
-        close e
-        false
-    end
-
-    def accept?
-        return false if @accepted
-        return false if role != :server || !@socket.is_a?( OpenSSL::SSL::SSLSocket )
-
-        true
-    end
-
-    # Accepts a new SSL client connection.
-    #
-    # @return   [OpenSSL::SSL::SSLSocket, nil]
-    #   New connection or `nil` if the socket isn't ready to accept new
-    #   connections yet.
-    #
-    # @private
-    def socket_accept
-        Error.translate do
-            socket = to_io.accept_nonblock
-
-            ssl_socket = OpenSSL::SSL::SSLSocket.new(
-                socket,
-                @ssl_context
-            )
-            ssl_socket.sync_close = true
-            ssl_socket
-        end
-    rescue IO::WaitReadable, IO::WaitWritable
+    rescue Errno::EINPROGRESS, IO::WaitReadable, IO::WaitWritable
     rescue Error => e
         close e
     end
