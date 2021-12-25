@@ -151,6 +151,7 @@ module TLS
                 @ssl_context
             )
             ssl_socket.sync_close = true
+            ssl.accept if @start_immediately
             ssl_socket
         end
     rescue IO::WaitReadable, IO::WaitWritable
