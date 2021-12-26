@@ -699,11 +699,7 @@ class Reactor
     end
 
     def connections_from_sockets( sockets )
-        sockets.map { |s| connection_from_socket( s ) }
-    end
-
-    def connection_from_socket( socket )
-        @connections[socket.to_io]
+        sockets.map { |s| @connections[s.to_io] }
     end
 
 end
