@@ -9,7 +9,7 @@
 module Arachni
 class Reactor
 
-    VERSION = '0.1.3'
+    VERSION = '0.1.3.1'
 
 end
 end

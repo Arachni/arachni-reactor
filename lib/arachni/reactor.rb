@@ -617,7 +617,7 @@ class Reactor
         end
 
         # Get connections with available events - :read, :write, :error.
-        selected = self.select_connections
+        selected = select_connections
 
         # Close connections that have errors.
         selected.delete(:error)&.each(&:close)

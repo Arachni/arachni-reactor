@@ -1,5 +1,9 @@
 # ChangeLog
 
+## Version 0.1.3.1
+
+- Fixed strange `private method` error on Ruby 2.6.9.
+
 ## Version 0.1.3
 
 - `Reactor` -- Reduced object allocations.
