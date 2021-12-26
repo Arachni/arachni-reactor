@@ -551,32 +551,8 @@ class Reactor
              'The host OS does not support UNIX-domain sockets.'
     end
 
-    def process_connections
-        if @connections.empty?
-            sleep @max_tick_interval
-            return
-        end
-
-        # Required for OSX as it connects immediately and then #select returns
-        # nothing as there's no activity, given that, OpenSSL doesn't get a chance
-        # to do its handshake so explicitly connect pending sockets, bypassing #select.
-        @connections.each do |_, connection|
-            connection._connect if !connection.connected?
-        end
-
-        # Get connections with available events - :read, :write, :error.
-        selected = select_connections
-
-        # Close connections that have errors.
-        [selected.delete(:error)].flatten.compact.each(&:close)
-
-        # Call the corresponding event on the connections.
-        selected.each { |event, connections| connections.each(&"_#{event}".to_sym) }
-    end
-
     def determine_connection_options( *args )
         options = {}
-        host = port = unix_socket = nil
 
         if args[1].is_a? Integer
             options[:host], options[:port], options[:handler], *handler_options = *args
@@ -634,6 +610,22 @@ class Reactor
         @connections.values.each(&:close)
     end
 
+    def process_connections
+        if @connections.empty?
+            sleep @max_tick_interval
+            return
+        end
+
+        # Get connections with available events - :read, :write, :error.
+        selected = self.select_connections
+
+        # Close connections that have errors.
+        selected.delete(:error)&.each(&:close)
+
+        # Call the corresponding event on the connections.
+        selected.each { |event, connections| connections.each(&"_#{event}".to_sym) }
+    end
+
     # @return   [Hash]
     #
     #   Connections grouped by their available events:
@@ -643,17 +635,34 @@ class Reactor
     #       {Connection#has_outgoing_data? outgoing buffer).
     #   * `:error`
     def select_connections
-        readables = read_sockets
+        r = []
+        w = []
+        e = []
+
+        @connections.values.each do |connection|
+
+            # Required for OSX as it connects immediately and then #select returns
+            # nothing as there's no activity, given that, OpenSSL doesn't get a chance
+            # to do its handshake so explicitly connect pending sockets, bypassing #select.
+            connection._connect if !connection.connected?
+
+            socket = connection.socket
+
+            e << socket
+
+            if connection.listener? || connection.connected?
+                r << socket
+            end
+
+            if connection.connected? && connection.has_outgoing_data?
+                w << socket
+            end
+        end
 
         selected_sockets =
             begin
                 Connection::Error.translate do
-                    select(
-                        readables,
-                        write_sockets,
-                        all_sockets,
-                        @select_timeout
-                    )
+                    select( r, w, e, @select_timeout )
                 end
             rescue Connection::Error => e
                 nil
@@ -668,8 +677,8 @@ class Reactor
         # So force a read for SSL sockets to cover all our bases.
         #
         # This is apparent especially on JRuby.
-        if readables.size != selected_sockets[0].size
-            (readables - selected_sockets[0]).each do |socket|
+        if r.size != selected_sockets[0].size
+            (r - selected_sockets[0]).each do |socket|
                 next if !socket.is_a?( OpenSSL::SSL::SSLSocket )
                 selected_sockets[0] << socket
             end
@@ -687,33 +696,6 @@ class Reactor
             read:    connections_from_sockets( selected_sockets[0] ),
             error:   connections_from_sockets( selected_sockets[2] )
         }
-    end
-
-    # @return   [Array<Socket>]
-    #   Sockets of all connections, we want to be ready to read at any time.
-    def read_sockets
-        s = []
-        @connections.each do |_, connection|
-            next if !connection.listener? && !connection.connected?
-            s << connection.socket
-        end
-        s
-    end
-
-    # @return   [Array<Socket>]
-    #   Sockets of connections with
-    #   {Connection#has_outgoing_data? outgoing data}.
-    def write_sockets
-        s = []
-        @connections.each do |_, connection|
-            next if connection.connected? && !connection.has_outgoing_data?
-            s << connection.socket
-        end
-        s
-    end
-
-    def all_sockets
-        @connections.values.map(&:socket)
     end
 
     def connections_from_sockets( sockets )
