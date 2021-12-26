@@ -2,6 +2,7 @@
 
 ## Version 0.1.3
 
+- `Reactor` -- Reduced object allocations.
 - `Connection::TLS#_read` -- Handle `OpenSSL::SSL::SSLErrorWaitReadable`.
 
 ## Version 0.1.2
