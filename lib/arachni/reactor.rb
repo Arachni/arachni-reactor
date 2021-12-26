@@ -414,7 +414,7 @@ class Reactor
     def schedule( &block )
         fail_if_not_running
 
-        if running? && in_same_thread?
+        if in_same_thread?
             block.call
         else
             next_tick(&block)
